@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090e17" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon-192.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon-192.svg" />
+  <title>AERONAV HAHO - Planner & Release Point</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #090e17;
+      --panel: #111827;
+      --card: #182234;
+      --border: #263349;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --amber: #f59e0b;
+      --danger: #ef4444;
+      --cyan: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    header {
+      background: #060a11;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .brand { display: flex; align-items: center; gap: 6px; }
+    .brand-badge {
+      background: var(--accent);
+      color: #041309;
+      font-weight: 800;
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      letter-spacing: 0.4px;
+    }
+    .brand h1 { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
+    .nav-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 6px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #051b0d; border-color: var(--accent); }
+    .btn-amber { background: var(--amber); color: #1c1002; border-color: var(--amber); }
+    .btn-cyan { background: rgba(56, 189, 248, 0.15); color: var(--cyan); border-color: rgba(56, 189, 248, 0.4); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      flex: 1;
+      min-height: calc(100vh - 49px);
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      #map { height: 52vh !important; min-height: 340px; }
+    }
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .box-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--cyan);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    input, select {
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--cyan); }
+    .result-card {
+      background: linear-gradient(145deg, #0d1f18, #0f172a);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .harp-mgrs {
+      font-family: ui-monospace, monospace;
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 0.6px;
+      margin: 4px 0 8px 0;
+      word-break: break-all;
+    }
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+    .stat { background: rgba(9, 14, 23, 0.7); padding: 6px 4px; border-radius: 6px; border: 1px solid var(--border); }
+    .stat-val { font-size: 13px; font-weight: 700; font-family: ui-monospace, monospace; color: var(--text); }
+    .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: ui-monospace, monospace; }
+    th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px; border-bottom: 1px solid var(--border); }
+    td { padding: 3px 4px; border-bottom: 1px solid rgba(38, 51, 73, 0.5); }
+    td input { padding: 3px 5px; font-size: 11px; }
+
+    #map { width: 100%; height: 100%; background: #0b1220; }
+    .status-msg { font-size: 11px; color: var(--amber); margin-top: 4px; min-height: 15px; }
+    .leaflet-div-icon { background: transparent; border: none; }
+    .open-box {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(245, 158, 11, 0.5);
+    }
+    .open-mgrs {
+      font-family: ui-monospace, monospace;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--amber);
+      letter-spacing: 0.5px;
+      margin: 2px 0 8px 0;
+      word-break: break-all;
+    }
+    .track-legend {
+      background: rgba(9, 14, 23, 0.88);
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 6px;
+      border: 1px solid #263349;
+      line-height: 1.7;
+    }
+    .lg-line { display: inline-block; width: 24px; height: 5px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
+    .warn-msg { font-size: 11px; color: var(--amber); margin-top: 6px; min-height: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="brand-badge">HAHO</span>
+      <h1>AERONAV PLANNER</h1>
+    </div>
+    <div class="nav-actions">
+      <button id="btnInstall" class="btn btn-cyan" style="display:none;">INSTALLA</button>
+      <a href="./nav.html" id="btnOpenNav" class="btn btn-amber">NAVIGATORE &rarr;</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="result-card">
+        <div class="box-title" style="color:var(--accent); margin-bottom:2px;">
+          <span>PUNTO DI LANCIO (HARP)</span>
+          <button class="btn" id="btnCopyHarp" style="padding:2px 6px; font-size:10px;">COPIA MGRS</button>
+        </div>
+        <div class="harp-mgrs" id="outHarpMgrs">---</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-val" id="outDistKm">--</div>
+            <div class="stat-lbl">Distanza DIP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="outBearing">--</div>
+            <div class="stat-lbl">Rotta al DIP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="outTimeMin">--</div>
+            <div class="stat-lbl">Tempo Volo</div>
+          </div>
+        </div>
+        <div class="open-box">
+          <div class="box-title" style="color:var(--amber); margin-bottom:0;">
+            <span>PUNTO DI APERTURA</span>
+            <button class="btn" id="btnCopyOpen" style="padding:2px 6px; font-size:10px;">COPIA MGRS</button>
+          </div>
+          <div class="open-mgrs" id="outOpenMgrs">---</div>
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-val" id="outFfDist">--</div>
+              <div class="stat-lbl">Deriva par. chiuso</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val" id="outFfBrg">--</div>
+              <div class="stat-lbl">Direzione deriva</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val" id="outFfTime">--</div>
+              <div class="stat-lbl">Caduta libera</div>
+            </div>
+          </div>
+          <div class="stat" style="margin-top:6px;">
+            <div class="stat-val" id="outGroundP">--</div>
+            <div class="stat-lbl">Pressione al suolo sulla verticale (rif. QNH)</div>
+          </div>
+          <div id="outGroundInfo" style="font-size:10px; color:var(--muted); margin-top:4px; line-height:1.35;"></div>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button class="btn btn-primary" id="btnSendToNav" style="flex:1; justify-content:center;">INVIA A NAVIGATORE</button>
+          <button class="btn" id="btnExportGpx">GPX</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="box-title">
+          <span>1. BERSAGLIO (DIP) &amp; DEM</span>
+          <button class="btn btn-cyan" id="btnMapPick" style="padding:2px 7px; font-size:10px;">CLICCA SU MAPPA</button>
+        </div>
+        <div style="margin-bottom:8px;">
+          <label>Coordinate DIP (MGRS / WGRS)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="dipMgrs" value="32T PP 32840 38820" placeholder="es. 32T PP 32840 38820" />
+            <button class="btn" id="btnApplyMgrs">IMPOSTA</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>Quota DIP (<span class="u-alt-lbl">ft</span> MSL)</label>
+            <input type="number" id="dipElev" value="100" step="10" />
+          </div>
+          <div>
+            <label>Safety Factor (<span class="u-sf-lbl">x 1.000 ft</span>)</label>
+            <input type="number" id="safetyFactor" value="1.0" step="0.1" min="0" />
+          </div>
+        </div>
+        <div class="status-msg" id="dipStatus">Trascina il marker rosso o inserisci MGRS.</div>
+      </div>
+
+      <div class="box">
+        <div class="box-title"><span>2. PROFILO LANCIO &amp; VELA</span></div>
+        <div class="grid-2">
+          <div>
+            <label>Quota lancio (<span class="u-alt-lbl">ft</span> MSL)</label>
+            <input type="number" id="launchAlt" value="15000" step="100" />
+          </div>
+          <div>
+            <label>Quota apertura (<span class="u-alt-lbl">ft</span> MSL)</label>
+            <input type="number" id="openAlt" value="15000" step="100" />
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:8px;">
+          <div>
+            <label>L/D (: 1)</label>
+            <input type="number" id="glideRatio" value="3.0" step="0.1" min="0.5" />
+          </div>
+          <div>
+            <label>Discesa vela (<span class="u-vs-lbl">ft/m</span>)</label>
+            <input type="number" id="sinkRate" value="750" step="10" min="50" />
+          </div>
+          <div>
+            <label>Caduta libera (<span class="u-vs-lbl">ft/m</span>)</label>
+            <input type="number" id="freefallRate" value="10500" step="100" min="1" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div>
+            <label>QNH (hPa)</label>
+            <input type="number" id="qnh" value="1013.2" step="0.1" min="850" max="1090" />
+          </div>
+        </div>
+        <div class="warn-msg" id="altWarn"></div>
+        <div style="font-size:11px; color:var(--muted); margin-top:6px; line-height:1.4;">
+          Caduta libera (lancio &rarr; apertura): <strong id="freefallAltLbl" style="color:var(--text);">--</strong> <span class="u-alt-lbl">ft</span><br />
+          Quota utile planata: <strong id="usableAltLbl" style="color:var(--text);">--</strong> <span class="u-alt-lbl">ft</span>
+          (Apertura &rarr; DIP + Safety Factor)
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="box-title">
+          <span>3. VENTI IN QUOTA (NOAA GFS)</span>
+          <button class="btn btn-cyan" id="btnFetchWind" style="padding:2px 7px; font-size:10px;">AGGIORNA NOAA</button>
+        </div>
+        <div id="noaaMetaBox" style="background:rgba(9,14,23,0.75); border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-size:11px; line-height:1.45;">
+          <div style="display:flex; justify-content:space-between; gap:6px;">
+            <span style="color:var(--muted);">Fonte meteo:</span>
+            <strong id="noaaSourceLbl" style="color:var(--cyan);">Profilo predefinito (locale)</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; gap:6px;">
+            <span style="color:var(--muted);">Validità bollettino:</span>
+            <strong id="noaaRunTime" style="color:var(--text);">--</strong>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div>
+            <label>Data Lancio</label>
+            <input type="date" id="windDate" />
+          </div>
+          <div>
+            <label>Ora Locale (HH:00)</label>
+            <select id="windHour"></select>
+          </div>
+        </div>
+        <div style="max-height: 210px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Quota (<span class="u-alt-lbl">ft</span>)</th>
+                <th>Prov. (°)</th>
+                <th>Vel. (<span class="u-spd-lbl">kt</span>)</th>
+              </tr>
+            </thead>
+            <tbody id="windTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./mgrs-core.js"></script>
+  <script>
+    const STATE_KEY = "aeronav_haho_mission_v1";
+    const NAV_KEY = "aeronav_haho_nav_v2";
+
+    // Legge le preferenze di unita' di misura condivise con il navigatore
+    let unitPrefs = { altUnit: "ft", spdUnit: "kt" };
+    try {
+      const savedNav = JSON.parse(localStorage.getItem(NAV_KEY));
+      if (savedNav) {
+        if (savedNav.altUnit === "m" || savedNav.altUnit === "ft") unitPrefs.altUnit = savedNav.altUnit;
+        if (savedNav.spdUnit === "ms" || savedNav.spdUnit === "kt") unitPrefs.spdUnit = savedNav.spdUnit;
+      }
+    } catch (e) {}
+
+    const isMetricAlt = unitPrefs.altUnit === "m";
+    const isMetricSpd = unitPrefs.spdUnit === "ms";
+
+    document.querySelectorAll(".u-alt-lbl").forEach(el => el.textContent = isMetricAlt ? "m" : "ft");
+    document.querySelectorAll(".u-spd-lbl").forEach(el => el.textContent = isMetricSpd ? "m/s" : "kt");
+    document.querySelectorAll(".u-sf-lbl").forEach(el => el.textContent = isMetricAlt ? "x 100 m" : "x 1.000 ft");
+    document.querySelectorAll(".u-vs-lbl").forEach(el => el.textContent = isMetricSpd ? "m/s" : "ft/m");
+
+    let state = {
+      dipLat: 43.6812,
+      dipLon: 10.6305,
+      dipElevFt: 100,
+      safetyFactorKft: 1.0,
+      launchAltFt: 15000,
+      openAltFt: 15000,
+      glideRatio: 3.0,
+      sinkRateFpm: 750,
+      freefallFpm: 10500,
+      qnhHpa: 1013.2,
+      qnhManual: false,
+      harpLat: 43.6812,
+      harpLon: 10.6305,
+      openLat: 43.6812,
+      openLon: 10.6305,
+      windSource: "Profilo predefinito (locale)",
+      windValidTime: "--",
+      winds: [
+        { altFt: 2000, dirFrom: 270, spdKt: 12 },
+        { altFt: 4000, dirFrom: 275, spdKt: 15 },
+        { altFt: 6000, dirFrom: 280, spdKt: 18 },
+        { altFt: 9000, dirFrom: 285, spdKt: 22 },
+        { altFt: 12000, dirFrom: 290, spdKt: 26 },
+        { altFt: 15000, dirFrom: 295, spdKt: 30 },
+        { altFt: 18000, dirFrom: 300, spdKt: 35 },
+        { altFt: 22000, dirFrom: 305, spdKt: 40 },
+        { altFt: 25000, dirFrom: 310, spdKt: 45 }
+      ]
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STATE_KEY));
+      if (saved && Number.isFinite(saved.dipLat) && Number.isFinite(saved.dipLon)) {
+        // Migrazione dal vecchio campo unico "apertura" (exitAltFt): lancio = apertura, nessuna caduta libera
+        if (saved.openAltFt === undefined && Number.isFinite(saved.exitAltFt)) {
+          saved.openAltFt = saved.exitAltFt;
+          saved.launchAltFt = saved.exitAltFt;
+        }
+        delete saved.exitAltFt;
+        state = { ...state, ...saved };
+      }
+    } catch (e) {}
+
+    const now = new Date();
+    const dateInput = document.getElementById("windDate");
+    const hourSelect = document.getElementById("windHour");
+    dateInput.value = now.toISOString().slice(0, 10);
+    for (let h = 0; h < 24; h++) {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = String(h).padStart(2, "0") + ":00";
+      if (h === now.getHours()) opt.selected = true;
+      hourSelect.appendChild(opt);
+    }
+
+    const MAP_KEY = "aeronav_haho_maptype_v1";
+    let savedMapType = "osm";
+    try { if (localStorage.getItem(MAP_KEY) === "sat") savedMapType = "sat"; } catch (e) {}
+
+    const map = L.map("map", { zoomControl: true }).setView([state.dipLat, state.dipLon], 12);
+    const baseOsm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap | NOAA GFS"
+    });
+    const baseSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+      maxNativeZoom: 18,
+      attribution: "Imagery &copy; Esri | NOAA GFS"
+    });
+    (savedMapType === "sat" ? baseSat : baseOsm).addTo(map);
+    L.control.layers({ "Stradale (OSM)": baseOsm, "Satellite": baseSat }, null, { position: "topright" }).addTo(map);
+    map.on("baselayerchange", (e) => {
+      try { localStorage.setItem(MAP_KEY, e.layer === baseSat ? "sat" : "osm"); } catch (err) {}
+    });
+
+    const dipIcon = L.divIcon({
+      html: `<div style="width:20px;height:20px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px #ef4444;"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    const harpIcon = L.divIcon({
+      html: `<div style="width:22px;height:22px;background:#22c55e;border:3px solid #041309;border-radius:4px;transform:rotate(45deg);box-shadow:0 0 12px #22c55e;"></div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+
+    const openIcon = L.divIcon({
+      html: `<div style="width:18px;height:18px;background:#f59e0b;border:3px solid #1c1002;border-radius:50%;box-shadow:0 0 10px #f59e0b;"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+
+    const dipMarker = L.marker([state.dipLat, state.dipLon], { icon: dipIcon, draggable: true }).addTo(map);
+    const harpMarker = L.marker([state.harpLat, state.harpLon], { icon: harpIcon }).addTo(map);
+    const openMarker = L.marker([state.dipLat, state.dipLon], { icon: openIcon }).addTo(map);
+    // Due tracce distinte: caduta libera (lancio -> apertura) e vela aperta (apertura -> atterraggio)
+    const TRACK_FF_COLOR = "#f97316";
+    const TRACK_CANOPY_COLOR = "#22c55e";
+    const freefallLine = L.polyline([], { color: TRACK_FF_COLOR, weight: 6, opacity: 0.95 }).addTo(map);
+    const routeLine = L.polyline([], { color: TRACK_CANOPY_COLOR, weight: 4, opacity: 0.95 }).addTo(map);
+    freefallLine.bindTooltip("", { sticky: true });
+    routeLine.bindTooltip("", { sticky: true });
+    const arrowLayer = L.layerGroup().addTo(map);
+
+    const trackLegend = L.control({ position: "bottomleft" });
+    trackLegend.onAdd = () => {
+      const d = L.DomUtil.create("div", "track-legend");
+      d.innerHTML =
+        `<div><span class="lg-line" style="background:${TRACK_FF_COLOR}"></span>Caduta libera (lancio &rarr; apertura)</div>` +
+        `<div><span class="lg-line" style="background:${TRACK_CANOPY_COLOR}"></span>Vela aperta (apertura &rarr; atterraggio)</div>`;
+      return d;
+    };
+    trackLegend.addTo(map);
+
+    function addTrackArrow(pts, color) {
+      if (pts.length < 2) return;
+      const i = Math.max(1, Math.floor(pts.length / 2));
+      const a = pts[i - 1];
+      const b = pts[i];
+      const brg = AeronavCore.bearingDegrees(a.lat, a.lon, b.lat, b.lon);
+      const icon = L.divIcon({
+        html: `<div style="width:20px;height:20px;transform:rotate(${brg}deg);"><svg viewBox="0 0 24 24" width="20" height="20"><polygon points="12,2 21,21 12,16 3,21" fill="${color}" stroke="#090e17" stroke-width="2"/></svg></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([(a.lat + b.lat) / 2, (a.lon + b.lon) / 2], { icon, interactive: false, keyboard: false }).addTo(arrowLayer);
+    }
+
+    // Zoom automatico sulla traccia: solo se richiesto o se la traccia esce dalla vista (niente zoom a ogni tasto)
+    function fitTrack(latLngs, force) {
+      if (latLngs.length < 2) return;
+      const b = L.latLngBounds(latLngs);
+      if (force || !map.getBounds().contains(b)) {
+        map.fitBounds(b.pad(0.25), { animate: false });
+      }
+    }
+
+    function debounce(fn, ms) {
+      let t = null;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), ms);
+      };
+    }
+    const safetyCircle = L.circle([state.dipLat, state.dipLon], {
+      radius: 300,
+      color: "#ef4444",
+      fillColor: "#ef4444",
+      fillOpacity: 0.12,
+      weight: 1.5,
+      dashArray: "5,5"
+    }).addTo(map);
+    const wpLayer = L.layerGroup().addTo(map);
+
+    let pickMode = false;
+    document.getElementById("btnMapPick").addEventListener("click", () => {
+      pickMode = !pickMode;
+      document.getElementById("btnMapPick").textContent = pickMode ? "CLICCA ORA..." : "CLICCA SU MAPPA";
+      document.getElementById("dipStatus").textContent = pickMode
+        ? "Tocca un punto sulla mappa per impostare il DIP."
+        : "Pronto.";
+    });
+
+    map.on("click", (e) => {
+      if (!pickMode) return;
+      pickMode = false;
+      document.getElementById("btnMapPick").textContent = "CLICCA SU MAPPA";
+      setDipCoordinates(e.latlng.lat, e.latlng.lng, true);
+    });
+
+    dipMarker.on("dragend", () => {
+      const pos = dipMarker.getLatLng();
+      setDipCoordinates(pos.lat, pos.lng, true);
+    });
+
+    function syncInputsFromState() {
+      document.getElementById("dipMgrs").value = AeronavCore.latLonToMgrs(state.dipLat, state.dipLon, 5);
+      document.getElementById("dipElev").value = isMetricAlt
+        ? Math.round(state.dipElevFt * AeronavCore.FT_TO_M)
+        : Math.round(state.dipElevFt);
+      document.getElementById("safetyFactor").value = isMetricAlt
+        ? Number(((state.safetyFactorKft * 1000 * AeronavCore.FT_TO_M) / 100).toFixed(1))
+        : Number(state.safetyFactorKft.toFixed(1));
+      document.getElementById("launchAlt").value = isMetricAlt
+        ? Math.round(state.launchAltFt * AeronavCore.FT_TO_M)
+        : Math.round(state.launchAltFt);
+      document.getElementById("openAlt").value = isMetricAlt
+        ? Math.round(state.openAltFt * AeronavCore.FT_TO_M)
+        : Math.round(state.openAltFt);
+      document.getElementById("freefallRate").value = isMetricSpd
+        ? Number(((state.freefallFpm / 60) * AeronavCore.FT_TO_M).toFixed(1))
+        : Math.round(state.freefallFpm);
+      document.getElementById("qnh").value = Number(state.qnhHpa).toFixed(1);
+      document.getElementById("glideRatio").value = state.glideRatio;
+      document.getElementById("sinkRate").value = isMetricSpd
+        ? Number(((state.sinkRateFpm / 60) * AeronavCore.FT_TO_M).toFixed(1))
+        : Math.round(state.sinkRateFpm);
+      const srcEl = document.getElementById("noaaSourceLbl");
+      const valEl = document.getElementById("noaaRunTime");
+      if (srcEl) srcEl.textContent = state.windSource || "Profilo predefinito (locale)";
+      if (valEl) valEl.textContent = state.windValidTime || "--";
+    }
+
+    let dipReq = 0;
+    async function setDipCoordinates(lat, lon, fetchMeteo = true) {
+      const req = ++dipReq;
+      state.dipLat = lat;
+      state.dipLon = lon;
+      dipMarker.setLatLng([lat, lon]);
+      safetyCircle.setLatLng([lat, lon]);
+      document.getElementById("dipMgrs").value = AeronavCore.latLonToMgrs(lat, lon, 5);
+
+      // Aggiorna subito mappa e risultati con i dati attuali, poi rifinisce quando arrivano DEM e venti
+      recalculateHarp(true);
+      if (!fetchMeteo) return;
+
+      document.getElementById("dipStatus").textContent = "Lettura elevazione DEM e venti NOAA GFS...";
+      const elevPromise = AeronavCore.fetchElevationFt(lat, lon).catch(() => null);
+      const windPromise = fetchOpenMeteoWinds();
+      const [elev] = await Promise.all([elevPromise, windPromise]);
+      if (req !== dipReq) return; // nel frattempo il DIP e' stato spostato di nuovo
+
+      if (elev !== null) {
+        state.dipElevFt = elev;
+        document.getElementById("dipElev").value = isMetricAlt
+          ? Math.round(elev * AeronavCore.FT_TO_M)
+          : elev;
+      } else {
+        document.getElementById("dipStatus").textContent = "DEM non raggiungibile, uso quota manuale.";
+      }
+      recalculateHarp(false);
+    }
+
+    document.getElementById("btnApplyMgrs").addEventListener("click", () => {
+      const raw = document.getElementById("dipMgrs").value;
+      try {
+        const { lat, lon } = AeronavCore.mgrsToLatLon(raw);
+        setDipCoordinates(lat, lon, true);
+      } catch (err) {
+        document.getElementById("dipStatus").textContent = "Errore MGRS: " + err.message;
+      }
+    });
+
+    function renderWindTable() {
+      const tbody = document.getElementById("windTableBody");
+      tbody.innerHTML = "";
+      state.winds.forEach((w, idx) => {
+        const dispAlt = isMetricAlt
+          ? Math.round(w.altFt * AeronavCore.FT_TO_M).toLocaleString("it-IT") + " m"
+          : w.altFt.toLocaleString("it-IT") + " ft";
+        const dispSpd = isMetricSpd
+          ? Number((w.spdKt * AeronavCore.KT_TO_MS).toFixed(1))
+          : Math.round(w.spdKt);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${dispAlt}</td>
+          <td><input type="number" min="0" max="360" value="${w.dirFrom}" data-idx="${idx}" data-field="dirFrom" /></td>
+          <td><input type="number" min="0" max="150" step="${isMetricSpd ? "0.5" : "1"}" value="${dispSpd}" data-idx="${idx}" data-field="spd" /></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll("input").forEach((inp) => {
+        inp.addEventListener("change", (e) => {
+          const i = parseInt(e.target.dataset.idx, 10);
+          const f = e.target.dataset.field;
+          const val = parseFloat(e.target.value) || 0;
+          if (f === "dirFrom") {
+            state.winds[i].dirFrom = val;
+          } else if (f === "spd") {
+            state.winds[i].spdKt = isMetricSpd ? (val * AeronavCore.MS_TO_KT) : val;
+          }
+          state.windSource = (state.windSource || "NOAA GFS 0.25°").replace(" (modificato)", "") + " (modificato)";
+          const srcEl = document.getElementById("noaaSourceLbl");
+          if (srcEl) srcEl.textContent = state.windSource;
+          recalculateHarp();
+        });
+      });
+    }
+
+    async function fetchOpenMeteoWinds() {
+      const dateStr = document.getElementById("windDate").value;
+      const hourIdx = parseInt(document.getElementById("windHour").value, 10) || 0;
+      const srcEl = document.getElementById("noaaSourceLbl");
+      const runTimeEl = document.getElementById("noaaRunTime");
+      const hpaLevels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250];
+      const vars = [
+        "pressure_msl",
+        "wind_speed_10m",
+        "wind_direction_10m",
+        ...hpaLevels.flatMap(p => [
+          `wind_speed_${p}hPa`,
+          `wind_direction_${p}hPa`,
+          `geopotential_height_${p}hPa`
+        ])
+      ].join(",");
+
+      // Endpoint dedicato esclusivamente al modello NOAA GFS (0.25°)
+      const url = `https://api.open-meteo.com/v1/gfs?latitude=${state.dipLat.toFixed(4)}&longitude=${state.dipLon.toFixed(4)}&hourly=${vars}&wind_speed_unit=kn&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
+
+      try {
+        if (srcEl) srcEl.textContent = "NOAA GFS 0.25° (NCEP)...";
+        if (runTimeEl) runTimeEl.textContent = "scaricamento...";
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Errore API NOAA GFS");
+        const data = await res.json();
+        const surfaceElevM = typeof data.elevation === "number" ? data.elevation : (state.dipElevFt * AeronavCore.FT_TO_M);
+        const newWinds = [];
+
+        // Vento al suolo (10m AGL)
+        const sfcSpd = data.hourly.wind_speed_10m?.[hourIdx];
+        const sfcDir = data.hourly.wind_direction_10m?.[hourIdx];
+        if (sfcSpd != null && sfcDir != null) {
+          newWinds.push({
+            altFt: Math.round(surfaceElevM * AeronavCore.M_TO_FT),
+            dirFrom: Math.round(sfcDir),
+            spdKt: Math.round(sfcSpd)
+          });
+        }
+
+        // Livelli barici NOAA GFS con quota geopotenziale reale MSL
+        for (const p of hpaLevels) {
+          const geoM = data.hourly[`geopotential_height_${p}hPa`]?.[hourIdx];
+          const spd = data.hourly[`wind_speed_${p}hPa`]?.[hourIdx];
+          const dir = data.hourly[`wind_direction_${p}hPa`]?.[hourIdx];
+          if (geoM != null && geoM > surfaceElevM + 30 && spd != null && dir != null) {
+            newWinds.push({
+              altFt: Math.round(geoM * AeronavCore.M_TO_FT),
+              dirFrom: Math.round(dir),
+              spdKt: Math.round(spd)
+            });
+          }
+        }
+
+        newWinds.sort((a, b) => a.altFt - b.altFt);
+
+        // Pressione ridotta al livello del mare (NOAA GFS): precompila il QNH solo se non inserito a mano
+        const pMsl = data.hourly.pressure_msl ? data.hourly.pressure_msl[hourIdx] : null;
+        if (typeof pMsl === "number" && !state.qnhManual) {
+          state.qnhHpa = Number(pMsl.toFixed(1));
+          document.getElementById("qnh").value = state.qnhHpa.toFixed(1);
+        }
+
+        if (newWinds.length > 0) {
+          state.winds = newWinds;
+          const tzAbbr = data.timezone_abbreviation || "Locale";
+          const rawTime = data.hourly.time?.[hourIdx] || `${dateStr}T${String(hourIdx).padStart(2, "0")}:00`;
+          const validStr = `${rawTime.replace("T", " ")} (${tzAbbr})`;
+          state.windSource = "NOAA GFS 0.25° (NCEP)";
+          state.windValidTime = validStr;
+          if (srcEl) srcEl.textContent = state.windSource;
+          if (runTimeEl) runTimeEl.textContent = state.windValidTime;
+          renderWindTable();
+          document.getElementById("dipStatus").textContent = "Dati DEM e venti NOAA GFS aggiornati.";
+        }
+      } catch (err) {
+        if (srcEl) srcEl.textContent = `${state.windSource || "Locale"} [Offline]`;
+        if (runTimeEl) runTimeEl.textContent = state.windValidTime || "--";
+        document.getElementById("dipStatus").textContent = "Uso profilo venti salvato (offline/errore rete NOAA).";
+      }
+    }
+
+    async function refreshNoaaAndRecalc() {
+      document.getElementById("dipStatus").textContent = "Scaricamento venti NOAA GFS...";
+      await fetchOpenMeteoWinds();
+      recalculateHarp();
+    }
+
+    document.getElementById("btnFetchWind").addEventListener("click", refreshNoaaAndRecalc);
+    document.getElementById("windDate").addEventListener("change", refreshNoaaAndRecalc);
+    document.getElementById("windHour").addEventListener("change", refreshNoaaAndRecalc);
+
+    let windsSorted = [];
+    function getWindAtAltitude(altFt) {
+      const sorted = windsSorted;
+      if (altFt <= sorted[0].altFt) return sorted[0];
+      if (altFt >= sorted[sorted.length - 1].altFt) return sorted[sorted.length - 1];
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const w1 = sorted[i], w2 = sorted[i + 1];
+        if (altFt >= w1.altFt && altFt <= w2.altFt) {
+          const t = (altFt - w1.altFt) / (w2.altFt - w1.altFt);
+          const rad1 = (w1.dirFrom * Math.PI) / 180;
+          const rad2 = (w2.dirFrom * Math.PI) / 180;
+          const u1 = -w1.spdKt * Math.sin(rad1);
+          const v1 = -w1.spdKt * Math.cos(rad1);
+          const u2 = -w2.spdKt * Math.sin(rad2);
+          const v2 = -w2.spdKt * Math.cos(rad2);
+          const u = u1 + (u2 - u1) * t;
+          const v = v1 + (v2 - v1) * t;
+          const spd = Math.hypot(u, v);
+          const dir = ((Math.atan2(-u, -v) * 180) / Math.PI + 360) % 360;
+          return { dirFrom: dir, spdKt: spd };
+        }
+      }
+      return sorted[0];
+    }
+
+    // Pressione di stazione al suolo ricavata dal QNH con atmosfera standard ISA
+    function stationPressureHpa(qnhHpa, elevM) {
+      return qnhHpa * Math.pow(1 - (0.0065 * elevM) / 288.15, 5.255);
+    }
+
+    let openElevTimer = null;
+    let openElevReq = 0;
+    let openGroundElevFt = null;
+    const openElevCache = new Map();
+    let openElevStatus = "pending"; // "pending" | "dem" | "fallback"
+
+    function renderOpenPressure() {
+      const elevFt = (openElevStatus === "dem" && openGroundElevFt !== null) ? openGroundElevFt : state.dipElevFt;
+      const elevM = elevFt * AeronavCore.FT_TO_M;
+      const p = stationPressureHpa(state.qnhHpa, elevM);
+      const inHg = p * 0.0295300;
+      document.getElementById("outGroundP").textContent = p.toFixed(1) + " hPa  (" + inHg.toFixed(2) + " inHg)";
+
+      const dispElev = isMetricAlt ? Math.round(elevM) + " m" : Math.round(elevFt) + " ft";
+      const src = openElevStatus === "dem"
+        ? "quota suolo DEM"
+        : (openElevStatus === "pending" ? "quota suolo in lettura, provvisoriamente quota DIP" : "DEM non disponibile, uso quota DIP");
+      document.getElementById("outGroundInfo").textContent =
+        "QNH " + state.qnhHpa.toFixed(1) + " hPa | " + src + ": " + dispElev;
+    }
+
+    function scheduleOpenGroundElev() {
+      clearTimeout(openElevTimer);
+      openElevStatus = "pending";
+      renderOpenPressure();
+      const lat = state.openLat;
+      const lon = state.openLon;
+      openElevTimer = setTimeout(async () => {
+        const req = ++openElevReq;
+        try {
+          const ck = lat.toFixed(4) + "," + lon.toFixed(4);
+          let e = openElevCache.get(ck);
+          if (e === undefined) {
+            e = await AeronavCore.fetchElevationFt(lat, lon);
+            openElevCache.set(ck, e);
+          }
+          if (req !== openElevReq) return;
+          openGroundElevFt = e;
+          openElevStatus = "dem";
+        } catch (err) {
+          if (req !== openElevReq) return;
+          openGroundElevFt = null;
+          openElevStatus = "fallback";
+        }
+        renderOpenPressure();
+      }, 600);
+    }
+
+    function recalculateHarp(forceFit = false) {
+      windsSorted = [...state.winds].sort((a, b) => a.altFt - b.altFt);
+      if (windsSorted.length === 0) windsSorted = [{ altFt: 0, dirFrom: 0, spdKt: 0 }];
+      const rawElev = parseFloat(document.getElementById("dipElev").value) || 0;
+      const rawSf = Math.max(0, parseFloat(document.getElementById("safetyFactor").value) || 0);
+      const rawLaunch = parseFloat(document.getElementById("launchAlt").value) || (isMetricAlt ? 4500 : 15000);
+      const rawOpen = parseFloat(document.getElementById("openAlt").value) || (isMetricAlt ? 4500 : 15000);
+      const rawSink = Math.max(0.5, parseFloat(document.getElementById("sinkRate").value) || (isMetricSpd ? 3.8 : 750));
+      const rawFall = Math.max(1, parseFloat(document.getElementById("freefallRate").value) || (isMetricSpd ? 53 : 10500));
+      const rawQnh = parseFloat(document.getElementById("qnh").value);
+
+      state.dipElevFt = isMetricAlt ? (rawElev * AeronavCore.M_TO_FT) : rawElev;
+      state.safetyFactorKft = isMetricAlt ? ((rawSf * 100 * AeronavCore.M_TO_FT) / 1000) : rawSf;
+      state.launchAltFt = isMetricAlt ? (rawLaunch * AeronavCore.M_TO_FT) : rawLaunch;
+      state.openAltFt = isMetricAlt ? (rawOpen * AeronavCore.M_TO_FT) : rawOpen;
+      state.glideRatio = Math.max(0.5, parseFloat(document.getElementById("glideRatio").value) || 3.0);
+      state.sinkRateFpm = isMetricSpd ? (rawSink * AeronavCore.M_TO_FT * 60) : rawSink;
+      state.freefallFpm = isMetricSpd ? (rawFall * AeronavCore.M_TO_FT * 60) : rawFall;
+      state.qnhHpa = (Number.isFinite(rawQnh) && rawQnh >= 850 && rawQnh <= 1090) ? rawQnh : 1013.2;
+
+      // La quota di apertura non puo' superare la quota di lancio
+      const warnEl = document.getElementById("altWarn");
+      let openAltEffFt = state.openAltFt;
+      if (state.openAltFt > state.launchAltFt) {
+        openAltEffFt = state.launchAltFt;
+        warnEl.textContent = "Quota apertura superiore alla quota lancio: calcolo con apertura = lancio.";
+      } else if (state.openAltFt === state.launchAltFt) {
+        warnEl.textContent = "Quota lancio = quota apertura: nessuna caduta libera, la traccia arancio non viene disegnata.";
+      } else {
+        warnEl.textContent = "";
+      }
+
+      const targetArrivalAltFt = state.dipElevFt + state.safetyFactorKft * 1000;
+      const usableAltFt = Math.max(0, openAltEffFt - targetArrivalAltFt);
+      const freefallAltFt = Math.max(0, state.launchAltFt - openAltEffFt);
+      const toDisp = (ft) => isMetricAlt ? Math.round(ft * AeronavCore.FT_TO_M) : Math.round(ft);
+      document.getElementById("usableAltLbl").textContent = toDisp(usableAltFt).toLocaleString("it-IT");
+      document.getElementById("freefallAltLbl").textContent = toDisp(freefallAltFt).toLocaleString("it-IT");
+
+      const sinkRateFps = state.sinkRateFpm / 60;
+      const fallRateFps = state.freefallFpm / 60;
+      const canopyHorizFps = sinkRateFps * state.glideRatio;
+      const canopyHorizKt = (canopyHorizFps * AeronavCore.FT_TO_M) * AeronavCore.MS_TO_KT;
+
+      const stepFt = 500;
+      const maxSteps = 400; // protezione contro valori enormi digitati nei campi
+      const canopyStepFt = Math.max(stepFt, (openAltEffFt - targetArrivalAltFt) / maxSteps);
+      const freefallStepFt = Math.max(stepFt, (state.launchAltFt - openAltEffFt) / maxSteps);
+      let canopyTimeSec = 0;
+      let freefallTimeSec = 0;
+
+      // FASE 1 (a ritroso): dal DIP risalgo controvento fino alla quota di apertura, con vela aperta
+      const canopyPts = [{ lat: state.dipLat, lon: state.dipLon, altFt: targetArrivalAltFt }];
+      let currLat = state.dipLat;
+      let currLon = state.dipLon;
+
+      for (let alt = targetArrivalAltFt; alt < openAltEffFt; alt += canopyStepFt) {
+        const dh = Math.min(canopyStepFt, openAltEffFt - alt);
+        const midAlt = alt + dh / 2;
+        const wind = getWindAtAltitude(midAlt);
+
+        const dtSec = dh / sinkRateFps;
+        canopyTimeSec += dtSec;
+
+        const groundSpeedMs = (wind.spdKt + canopyHorizKt) * AeronavCore.KT_TO_MS;
+        const stepDistM = groundSpeedMs * dtSec;
+
+        const upwindDeg = wind.dirFrom % 360;
+        const nextPt = AeronavCore.destinationPoint(currLat, currLon, upwindDeg, stepDistM);
+        currLat = nextPt.lat;
+        currLon = nextPt.lon;
+        canopyPts.push({ lat: currLat, lon: currLon, altFt: alt + dh });
+      }
+
+      state.openLat = currLat;
+      state.openLon = currLon;
+
+      // FASE 2 (a ritroso): dall'apertura risalgo fino alla quota di lancio. Paracadute chiuso:
+      // nessuna velocita' propria, il corpo e' trasportato solo dal vento -> il punto di lancio
+      // e' spostato controvento rispetto al punto di apertura.
+      const freefallPts = [{ lat: currLat, lon: currLon, altFt: openAltEffFt }];
+      for (let alt = openAltEffFt; alt < state.launchAltFt; alt += freefallStepFt) {
+        const dh = Math.min(freefallStepFt, state.launchAltFt - alt);
+        const midAlt = alt + dh / 2;
+        const wind = getWindAtAltitude(midAlt);
+
+        const dtSec = dh / fallRateFps;
+        freefallTimeSec += dtSec;
+
+        const driftDistM = (wind.spdKt * AeronavCore.KT_TO_MS) * dtSec;
+        const upwindDeg = wind.dirFrom % 360;
+        const nextPt = AeronavCore.destinationPoint(currLat, currLon, upwindDeg, driftDistM);
+        currLat = nextPt.lat;
+        currLon = nextPt.lon;
+        freefallPts.push({ lat: currLat, lon: currLon, altFt: alt + dh });
+      }
+
+      state.harpLat = currLat;
+      state.harpLon = currLon;
+
+      const totalDistM = AeronavCore.distanceMeters(state.harpLat, state.harpLon, state.dipLat, state.dipLon);
+      const bearingToDip = AeronavCore.bearingDegrees(state.harpLat, state.harpLon, state.dipLat, state.dipLon);
+      const ffDistM = AeronavCore.distanceMeters(state.harpLat, state.harpLon, state.openLat, state.openLon);
+      const ffBearing = ffDistM > 1
+        ? AeronavCore.bearingDegrees(state.harpLat, state.harpLon, state.openLat, state.openLon)
+        : null;
+      const fmtDist = (m) => isMetricAlt
+        ? (m >= 1000 ? (m / 1000).toFixed(2) + " km" : Math.round(m) + " m")
+        : (m / 1000).toFixed(2) + " km";
+
+      document.getElementById("outHarpMgrs").textContent = AeronavCore.latLonToMgrs(state.harpLat, state.harpLon, 5);
+      document.getElementById("outDistKm").textContent = fmtDist(totalDistM);
+      document.getElementById("outBearing").textContent = String(Math.round(bearingToDip)).padStart(3, "0") + "°";
+      document.getElementById("outTimeMin").textContent = ((canopyTimeSec + freefallTimeSec) / 60).toFixed(1) + " min";
+
+      document.getElementById("outOpenMgrs").textContent = AeronavCore.latLonToMgrs(state.openLat, state.openLon, 5);
+      document.getElementById("outFfDist").textContent = fmtDist(ffDistM);
+      document.getElementById("outFfBrg").textContent = ffBearing === null
+        ? "--"
+        : String(Math.round(ffBearing) % 360).padStart(3, "0") + "°";
+      document.getElementById("outFfTime").textContent = freefallTimeSec >= 60
+        ? (freefallTimeSec / 60).toFixed(1) + " min"
+        : Math.round(freefallTimeSec) + " s";
+
+      harpMarker.setLatLng([state.harpLat, state.harpLon]);
+      openMarker.setLatLng([state.openLat, state.openLon]);
+
+      // Tracce: planata (apertura -> DIP) in verde, caduta libera (lancio -> apertura) tratteggiata arancio
+      canopyPts.reverse();
+      freefallPts.reverse();
+      const canopyLatLngs = canopyPts.map(p => [p.lat, p.lon]);
+      const freefallLatLngs = freefallPts.map(p => [p.lat, p.lon]);
+      routeLine.setLatLngs(canopyLatLngs);
+      freefallLine.setLatLngs(freefallLatLngs);
+
+      const canopyDistM = AeronavCore.distanceMeters(state.openLat, state.openLon, state.dipLat, state.dipLon);
+      routeLine.setTooltipContent(
+        "VELA APERTA (apertura → atterraggio): " + fmtDist(canopyDistM) + " | " + (canopyTimeSec / 60).toFixed(1) + " min"
+      );
+      freefallLine.setTooltipContent(
+        "CADUTA LIBERA (lancio → apertura): " + fmtDist(ffDistM) + " | " +
+        (freefallTimeSec >= 60 ? (freefallTimeSec / 60).toFixed(1) + " min" : Math.round(freefallTimeSec) + " s")
+      );
+      arrowLayer.clearLayers();
+      addTrackArrow(freefallPts, TRACK_FF_COLOR);
+      addTrackArrow(canopyPts, TRACK_CANOPY_COLOR);
+
+      const marginGlideM = (state.safetyFactorKft * 1000 * state.glideRatio) * AeronavCore.FT_TO_M;
+      safetyCircle.setRadius(Math.max(150, marginGlideM));
+
+      wpLayer.clearLayers();
+      canopyPts.forEach((pt, i) => {
+        if (i > 0 && i < canopyPts.length - 1 && Math.round(pt.altFt) % 2500 === 0) {
+          const wpAltLabel = isMetricAlt
+            ? `${Math.round(pt.altFt * AeronavCore.FT_TO_M)} m`
+            : `${Math.round(pt.altFt)} ft`;
+          L.circleMarker([pt.lat, pt.lon], {
+            radius: 4,
+            color: "#38bdf8",
+            fillColor: "#090e17",
+            fillOpacity: 1,
+            weight: 2
+          }).bindTooltip(wpAltLabel).addTo(wpLayer);
+        }
+      });
+
+      fitTrack(freefallLatLngs.concat(canopyLatLngs), forceFit);
+
+      scheduleOpenGroundElev();
+      saveMissionState();
+    }
+
+    function saveMissionState() {
+      localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    }
+
+    const debouncedRecalc = debounce(() => recalculateHarp(false), 200);
+    ["dipElev", "safetyFactor", "launchAlt", "openAlt", "glideRatio", "sinkRate", "freefallRate", "qnh"].forEach(id => {
+      document.getElementById(id).addEventListener("input", debouncedRecalc);
+    });
+    // Se il QNH viene digitato a mano, non viene piu' sovrascritto dall'aggiornamento venti
+    document.getElementById("qnh").addEventListener("input", () => { state.qnhManual = true; });
+
+    document.getElementById("btnCopyOpen").addEventListener("click", () => {
+      const txt = document.getElementById("outOpenMgrs").textContent;
+      navigator.clipboard?.writeText(txt);
+      document.getElementById("dipStatus").textContent = "Punto di apertura MGRS copiato negli appunti: " + txt;
+    });
+
+    document.getElementById("btnCopyHarp").addEventListener("click", () => {
+      const txt = document.getElementById("outHarpMgrs").textContent;
+      navigator.clipboard?.writeText(txt);
+      document.getElementById("dipStatus").textContent = "HARP MGRS copiato negli appunti: " + txt;
+    });
+
+    document.getElementById("btnSendToNav").addEventListener("click", () => {
+      saveMissionState();
+      window.location.href = "./nav.html";
+    });
+
+    document.getElementById("btnExportGpx").addEventListener("click", () => {
+      const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="AeronavHAHO">
+  <wpt lat="${state.harpLat.toFixed(6)}" lon="${state.harpLon.toFixed(6)}">
+    <ele>${Math.round(state.launchAltFt * AeronavCore.FT_TO_M)}</ele>
+    <name>HARP</name>
+    <desc>MGRS: ${AeronavCore.latLonToMgrs(state.harpLat, state.harpLon, 5)}</desc>
+  </wpt>
+  <wpt lat="${state.openLat.toFixed(6)}" lon="${state.openLon.toFixed(6)}">
+    <ele>${Math.round(Math.min(state.openAltFt, state.launchAltFt) * AeronavCore.FT_TO_M)}</ele>
+    <name>OPEN</name>
+    <desc>MGRS: ${AeronavCore.latLonToMgrs(state.openLat, state.openLon, 5)}</desc>
+  </wpt>
+  <wpt lat="${state.dipLat.toFixed(6)}" lon="${state.dipLon.toFixed(6)}">
+    <ele>${Math.round(state.dipElevFt * AeronavCore.FT_TO_M)}</ele>
+    <name>DIP</name>
+    <desc>MGRS: ${AeronavCore.latLonToMgrs(state.dipLat, state.dipLon, 5)}</desc>
+  </wpt>
+  <rte>
+    <name>HAHO_HARP_TO_DIP</name>
+    <rtept lat="${state.harpLat.toFixed(6)}" lon="${state.harpLon.toFixed(6)}"><name>HARP</name></rtept>
+    <rtept lat="${state.openLat.toFixed(6)}" lon="${state.openLon.toFixed(6)}"><name>OPEN</name></rtept>
+    <rtept lat="${state.dipLat.toFixed(6)}" lon="${state.dipLon.toFixed(6)}"><name>DIP</name></rtept>
+  </rte>
+</gpx>`;
+      const blob = new Blob([gpx], { type: "application/gpx+xml" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "AeronavHAHO_Mission.gpx";
+      a.click();
+    });
+
+    syncInputsFromState();
+    renderWindTable();
+    recalculateHarp(true);
+
+    let deferredPrompt = null;
+    AeronavCore.initPwaAutoUpdate((e) => {
+      deferredPrompt = e;
+      document.getElementById("btnInstall").style.display = "inline-flex";
+    });
+    document.getElementById("btnInstall").addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById("btnInstall").style.display = "none";
+    });
+  </script>
+</body>
+</html>
