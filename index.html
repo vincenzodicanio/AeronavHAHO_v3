@@ -73,7 +73,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 400px 1fr;
+      grid-template-columns: 410px 1fr;
       flex: 1;
       min-height: calc(100vh - 49px);
     }
@@ -174,47 +174,77 @@
       border: 1px solid #263349;
       line-height: 1.7;
     }
-    /* Schede Planner / Meteo */
-    .tabs { display: flex; gap: 6px; flex-basis: 100%; }
-    .tab-btn {
-      flex: 1;
-      background: var(--card);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 7px 6px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-    }
-    .tab-btn.active { background: rgba(34, 197, 94, 0.15); color: var(--accent); border-color: rgba(34, 197, 94, 0.6); }
-    .meteo-view { display: none; flex: 1; background: var(--panel); padding: 10px; }
-    .meteo-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
-    .wind-badge { font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 5px; border: 1px solid var(--border); letter-spacing: 0.3px; }
-    .wind-badge.ok { color: var(--accent); border-color: rgba(34, 197, 94, 0.6); background: rgba(34, 197, 94, 0.12); }
-    .wind-badge.pending { color: var(--amber); border-color: rgba(245, 158, 11, 0.7); background: rgba(245, 158, 11, 0.12); }
-    .wind-badge.base { color: var(--cyan); border-color: rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.1); }
-    .wind-note { font-size: 11px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
-    .wind-table td.wind-fc { color: var(--muted); white-space: nowrap; }
-    .wind-table td input { width: 70px; }
-    .wind-table tr.wind-edited td { background: rgba(245, 158, 11, 0.12); }
-    .wind-table tr.wind-added td { background: rgba(34, 197, 94, 0.1); }
-    .wind-row-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      border-radius: 5px;
-      padding: 2px 7px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .wind-row-btn.del { color: var(--danger); border-color: rgba(239, 68, 68, 0.5); }
-    .wind-table .wind-reset { visibility: hidden; }
-    .wind-table tr.wind-edited .wind-reset { visibility: visible; color: var(--amber); border-color: rgba(245, 158, 11, 0.6); }
-    .wind-add { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 6px; align-items: end; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
     .lg-line { display: inline-block; width: 24px; height: 5px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
     .warn-msg { font-size: 11px; color: var(--amber); margin-top: 6px; min-height: 0; }
+
+    /* Scheda Skew-T */
+    .skewt-wrap {
+      background: #080d16;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .skewt-wrap canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: crosshair;
+    }
+    .skewt-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      align-items: center;
+    }
+    .skewt-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .swatch {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .skewt-readout {
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      color: var(--cyan);
+      background: rgba(9, 14, 23, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 6px;
+      margin-top: 6px;
+      min-height: 22px;
+    }
+
+    /* Modale Skew-T espanso */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, 0.86);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: min(760px, 100%);
+      max-height: 94vh;
+      overflow-y: auto;
+      padding: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
   </style>
 </head>
 <body>
@@ -226,10 +256,6 @@
     <div class="nav-actions">
       <button id="btnInstall" class="btn btn-cyan" style="display:none;">INSTALLA</button>
       <a href="./nav.html" id="btnOpenNav" class="btn btn-amber">NAVIGATORE &rarr;</a>
-    </div>
-    <div class="tabs">
-      <button type="button" class="tab-btn active" id="tabPlanner">PLANNER</button>
-      <button type="button" class="tab-btn" id="tabMeteo">METEO</button>
     </div>
   </header>
 
@@ -354,49 +380,20 @@
 
       <div class="box">
         <div class="box-title">
-          <span>3. VENTI IN QUOTA</span>
-          <button class="btn btn-cyan" id="btnOpenMeteo" style="padding:2px 7px; font-size:10px;">SCHEDA METEO &rarr;</button>
-        </div>
-        <div style="background:rgba(9,14,23,0.75); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:11px; line-height:1.45;">
-          <div style="display:flex; justify-content:space-between; gap:6px;">
-            <span style="color:var(--muted);">Venti in uso:</span>
-            <strong id="windSummarySrc" style="color:var(--cyan); text-align:right;">--</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; gap:6px;">
-            <span style="color:var(--muted);">Validità:</span>
-            <strong id="windSummaryVal" style="color:var(--text);">--</strong>
-          </div>
-          <div id="windSummaryPending" style="color:var(--amber); font-weight:700; margin-top:3px; display:none;">Modifiche non validate nella scheda Meteo</div>
-        </div>
-      </div>
-    </aside>
-
-    <main id="map"></main>
-  </div>
-
-  <!-- SCHEDA METEO: bollettino venti modificabile con venti rilevati in loco + validazione -->
-  <section id="viewMeteo" class="meteo-view">
-    <div class="meteo-inner">
-      <div class="box">
-        <div class="box-title">
-          <span>BOLLETTINO VENTI (NOAA GFS)</span>
+          <span>3. VENTI IN QUOTA (NOAA GFS)</span>
           <button class="btn btn-cyan" id="btnFetchWind" style="padding:2px 7px; font-size:10px;">AGGIORNA NOAA</button>
         </div>
         <div id="noaaMetaBox" style="background:rgba(9,14,23,0.75); border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-size:11px; line-height:1.45;">
           <div style="display:flex; justify-content:space-between; gap:6px;">
             <span style="color:var(--muted);">Fonte meteo:</span>
-            <strong id="noaaSourceLbl" style="color:var(--cyan); text-align:right;">Profilo predefinito (locale)</strong>
+            <strong id="noaaSourceLbl" style="color:var(--cyan);">Profilo predefinito (locale)</strong>
           </div>
           <div style="display:flex; justify-content:space-between; gap:6px;">
             <span style="color:var(--muted);">Validità bollettino:</span>
             <strong id="noaaRunTime" style="color:var(--text);">--</strong>
           </div>
-          <div style="display:flex; justify-content:space-between; gap:6px;">
-            <span style="color:var(--muted);">Posizione (DIP):</span>
-            <strong id="windPosLbl" style="color:var(--text);">--</strong>
-          </div>
         </div>
-        <div class="grid-2">
+        <div class="grid-2" style="margin-bottom:8px;">
           <div>
             <label>Data Lancio</label>
             <input type="date" id="windDate" />
@@ -406,63 +403,78 @@
             <select id="windHour"></select>
           </div>
         </div>
-      </div>
-
-      <div class="box">
-        <div class="box-title">
-          <span>VENTI IN QUOTA</span>
-          <span class="wind-badge base" id="windStatusBadge">--</span>
-        </div>
-        <div class="wind-note">
-          Modifica direzione e velocità con i venti rilevati in loco (o aggiungi una quota rilevata). Le modifiche restano in bozza e
-          <strong style="color:var(--text);">non cambiano il calcolo</strong> finché non premi <strong style="color:var(--text);">VALIDA VENTI</strong>.
-          Le righe in arancio sono modificate rispetto al bollettino, quelle in verde sono quote aggiunte.
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="wind-table">
+        <div style="max-height: 210px; overflow-y: auto;">
+          <table>
             <thead>
               <tr>
                 <th>Quota (<span class="u-alt-lbl">ft</span>)</th>
-                <th>Bollettino (° / <span class="u-spd-lbl">kt</span>)</th>
                 <th>Prov. (°)</th>
                 <th>Vel. (<span class="u-spd-lbl">kt</span>)</th>
-                <th></th>
               </tr>
             </thead>
             <tbody id="windTableBody"></tbody>
           </table>
         </div>
+      </div>
 
-        <div class="wind-add">
-          <div>
-            <label>Quota rilevata (<span class="u-alt-lbl">ft</span> MSL)</label>
-            <input type="number" id="windAddAlt" step="100" />
-          </div>
-          <div>
-            <label>Prov. (°)</label>
-            <input type="number" id="windAddDir" min="0" max="360" />
-          </div>
-          <div>
-            <label>Vel. (<span class="u-spd-lbl">kt</span>)</label>
-            <input type="number" id="windAddSpd" min="0" step="0.5" />
-          </div>
-          <button class="btn btn-cyan" id="btnAddWind" style="height:33px; justify-content:center;">+ AGGIUNGI</button>
+      <!-- SCHEDA 4: SKEW-T LOG-P DEL DIP -->
+      <div class="box">
+        <div class="box-title">
+          <span>4. SONDAGGIO SKEW-T (DIP)</span>
+          <button class="btn btn-cyan" id="btnExpandSkewT" style="padding:2px 7px; font-size:10px;">INGRANDISCI</button>
         </div>
+        <div class="stat-row" style="margin-bottom:8px;">
+          <div class="stat">
+            <div class="stat-val" id="skewFreezeLvl">--</div>
+            <div class="stat-lbl">Zero Termico</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="skewLaunchTemp">--</div>
+            <div class="stat-lbl">Temp. Lancio</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="skewSfcTemp">--</div>
+            <div class="stat-lbl">T / Td Suolo</div>
+          </div>
+        </div>
+        <div class="skewt-wrap">
+          <canvas id="skewtCanvas" width="380" height="340"></canvas>
+        </div>
+        <div class="skewt-readout" id="skewtReadout">Passa il cursore sul grafico per leggere quota, T e Td.</div>
+        <div class="skewt-legend">
+          <span><i class="swatch" style="background:#ef4444;"></i>Temp (T)</span>
+          <span><i class="swatch" style="background:#22c55e;"></i>Rugiada (Td)</span>
+          <span><i class="swatch" style="background:#38bdf8;"></i>0 °C</span>
+          <span><i class="swatch" style="background:#f59e0b; opacity:0.65;"></i>Adiab. Secca</span>
+          <span><i class="swatch" style="background:#a855f7;"></i>Quota Lancio</span>
+        </div>
+      </div>
+    </aside>
 
-        <div class="grid-2" style="margin-top:10px;">
-          <div>
-            <label>Ora rilevamento (facoltativa)</label>
-            <input type="time" id="windObsTime" />
-          </div>
-        </div>
-        <div style="display:flex; gap:6px; margin-top:10px;">
-          <button class="btn btn-primary" id="btnValidateWinds" style="flex:1; justify-content:center; padding:9px;">VALIDA VENTI</button>
-          <button class="btn" id="btnResetWinds">RIPRISTINA BOLLETTINO</button>
-        </div>
-        <div class="status-msg" id="windMsg"></div>
+    <main id="map"></main>
+  </div>
+
+  <!-- MODALE SKEW-T INGRANDITO -->
+  <div class="modal-backdrop" id="skewtModal">
+    <div class="modal-card">
+      <div class="box-title" style="margin-bottom:8px;">
+        <span>DIAGRAMMA SKEW-T LOG-P &mdash; VERTICALE DIP (<span id="modalDipMgrs">--</span>)</span>
+        <button class="btn" id="btnCloseSkewT" style="padding:3px 8px;">CHIUDI &times;</button>
+      </div>
+      <div class="skewt-wrap">
+        <canvas id="skewtCanvasModal" width="720" height="560"></canvas>
+      </div>
+      <div class="skewt-readout" id="skewtReadoutModal">Passa il cursore sul grafico per leggere i parametri termodinamici del livello.</div>
+      <div class="skewt-legend">
+        <span><i class="swatch" style="background:#ef4444;"></i>Temperatura (T °C)</span>
+        <span><i class="swatch" style="background:#22c55e;"></i>Punto di Rugiada (Td °C)</span>
+        <span><i class="swatch" style="background:#38bdf8;"></i>Isoterma 0 °C (Freezing Level)</span>
+        <span><i class="swatch" style="background:#f59e0b; opacity:0.65;"></i>Adiabatica Secca (&theta;)</span>
+        <span><i class="swatch" style="background:#a855f7;"></i>Quota Lancio</span>
+        <span><i class="swatch" style="background:#94a3b8;"></i>Suolo DIP</span>
       </div>
     </div>
-  </section>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="./mgrs-core.js"></script>
@@ -488,6 +500,18 @@
     document.querySelectorAll(".u-sf-lbl").forEach(el => el.textContent = isMetricAlt ? "x 100 m" : "x 1.000 ft");
     document.querySelectorAll(".u-vs-lbl").forEach(el => el.textContent = isMetricSpd ? "m/s" : "ft/m");
 
+    // Profilo termodinamico standard ISA iniziale per il DIP (usato finche' non si scarica NOAA)
+    function buildDefaultSounding() {
+      const levels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250];
+      return levels.map(p => {
+        const altM = 44330 * (1 - Math.pow(p / 1013.25, 1 / 5.255));
+        const altFt = Math.round(altM * AeronavCore.M_TO_FT);
+        const tempC = Number((15 - 0.0065 * altM).toFixed(1));
+        const dewC = Number((tempC - 6 - (1013 - p) * 0.012).toFixed(1));
+        return { pHpa: p, altFt, tempC, dewC, dirFrom: 280, spdKt: Math.round(12 + (1000 - p) * 0.045) };
+      });
+    }
+
     let state = {
       dipLat: 43.6812,
       dipLon: 10.6305,
@@ -506,10 +530,6 @@
       openLon: 10.6305,
       windSource: "Profilo predefinito (locale)",
       windValidTime: "--",
-      windBulletin: null,   // ultimo bollettino scaricato (riferimento, non modificabile)
-      windDraft: null,      // venti in bozza nella scheda Meteo (modificabili)
-      windValidated: false, // true = i venti in uso includono rilevamenti in loco validati
-      windObsTime: "",
       winds: [
         { altFt: 2000, dirFrom: 270, spdKt: 12 },
         { altFt: 4000, dirFrom: 275, spdKt: 15 },
@@ -520,27 +540,24 @@
         { altFt: 18000, dirFrom: 300, spdKt: 35 },
         { altFt: 22000, dirFrom: 305, spdKt: 40 },
         { altFt: 25000, dirFrom: 310, spdKt: 45 }
-      ]
+      ],
+      sounding: buildDefaultSounding()
     };
 
     try {
       const saved = JSON.parse(localStorage.getItem(STATE_KEY));
       if (saved && Number.isFinite(saved.dipLat) && Number.isFinite(saved.dipLon)) {
-        // Migrazione dal vecchio campo unico "apertura" (exitAltFt): lancio = apertura, nessuna caduta libera
         if (saved.openAltFt === undefined && Number.isFinite(saved.exitAltFt)) {
           saved.openAltFt = saved.exitAltFt;
           saved.launchAltFt = saved.exitAltFt;
         }
         delete saved.exitAltFt;
         state = { ...state, ...saved };
+        if (!Array.isArray(state.sounding) || state.sounding.length === 0) {
+          state.sounding = buildDefaultSounding();
+        }
       }
     } catch (e) {}
-
-    // Migrazione: vecchi salvataggi senza bozza/bollettino -> i venti salvati diventano il bollettino di riferimento
-    function cloneWinds(a) { return a.map(w => ({ altFt: w.altFt, dirFrom: w.dirFrom, spdKt: w.spdKt })); }
-    if (typeof state.windSource === "string") state.windSource = state.windSource.replace(" (modificato)", "");
-    if (!Array.isArray(state.windBulletin) || !state.windBulletin.length) state.windBulletin = cloneWinds(state.winds);
-    if (!Array.isArray(state.windDraft) || !state.windDraft.length) state.windDraft = cloneWinds(state.winds);
 
     const now = new Date();
     const dateInput = document.getElementById("windDate");
@@ -584,7 +601,6 @@
       iconSize: [22, 22],
       iconAnchor: [11, 11]
     });
-
     const openIcon = L.divIcon({
       html: `<div style="width:18px;height:18px;background:#f59e0b;border:3px solid #1c1002;border-radius:50%;box-shadow:0 0 10px #f59e0b;"></div>`,
       iconSize: [18, 18],
@@ -594,7 +610,7 @@
     const dipMarker = L.marker([state.dipLat, state.dipLon], { icon: dipIcon, draggable: true }).addTo(map);
     const harpMarker = L.marker([state.harpLat, state.harpLon], { icon: harpIcon }).addTo(map);
     const openMarker = L.marker([state.dipLat, state.dipLon], { icon: openIcon }).addTo(map);
-    // Due tracce distinte: caduta libera (lancio -> apertura) e vela aperta (apertura -> atterraggio)
+
     const TRACK_FF_COLOR = "#f97316";
     const TRACK_CANOPY_COLOR = "#22c55e";
     const freefallLine = L.polyline([], { color: TRACK_FF_COLOR, weight: 6, opacity: 0.95 }).addTo(map);
@@ -627,7 +643,6 @@
       L.marker([(a.lat + b.lat) / 2, (a.lon + b.lon) / 2], { icon, interactive: false, keyboard: false }).addTo(arrowLayer);
     }
 
-    // Zoom automatico sulla traccia: solo se richiesto o se la traccia esce dalla vista (niente zoom a ogni tasto)
     function fitTrack(latLngs, force) {
       if (latLngs.length < 2) return;
       const b = L.latLngBounds(latLngs);
@@ -643,6 +658,7 @@
         t = setTimeout(() => fn(...args), ms);
       };
     }
+
     const safetyCircle = L.circle([state.dipLat, state.dipLon], {
       radius: 300,
       color: "#ef4444",
@@ -711,15 +727,14 @@
       safetyCircle.setLatLng([lat, lon]);
       document.getElementById("dipMgrs").value = AeronavCore.latLonToMgrs(lat, lon, 5);
 
-      // Aggiorna subito mappa e risultati con i dati attuali, poi rifinisce quando arrivano DEM e venti
       recalculateHarp(true);
       if (!fetchMeteo) return;
 
-      document.getElementById("dipStatus").textContent = "Lettura elevazione DEM e venti NOAA GFS...";
+      document.getElementById("dipStatus").textContent = "Lettura elevazione DEM e sondaggio NOAA GFS...";
       const elevPromise = AeronavCore.fetchElevationFt(lat, lon).catch(() => null);
       const windPromise = fetchOpenMeteoWinds();
       const [elev] = await Promise.all([elevPromise, windPromise]);
-      if (req !== dipReq) return; // nel frattempo il DIP e' stato spostato di nuovo
+      if (req !== dipReq) return;
 
       if (elev !== null) {
         state.dipElevFt = elev;
@@ -742,87 +757,21 @@
       }
     });
 
-    // ===== SCHEDA METEO: bollettino + venti rilevati in loco, con validazione =====
-    function spdDisp(kt) { return isMetricSpd ? Number((kt * AeronavCore.KT_TO_MS).toFixed(1)) : Math.round(kt); }
-    function altDisp(ft) { return isMetricAlt ? Math.round(ft * AeronavCore.FT_TO_M) : Math.round(ft); }
-    function bulletinAt(altFt) { return (state.windBulletin || []).find(b => b.altFt === altFt); }
-    function windRowEdited(w) {
-      const fc = bulletinAt(w.altFt);
-      return !fc || w.dirFrom !== fc.dirFrom || Math.abs(w.spdKt - fc.spdKt) > 0.05;
-    }
-    function sameWinds(a, b) {
-      if (a.length !== b.length) return false;
-      const sa = [...a].sort((x, y) => x.altFt - y.altFt);
-      const sb = [...b].sort((x, y) => x.altFt - y.altFt);
-      return sa.every((w, i) => w.altFt === sb[i].altFt && w.dirFrom === sb[i].dirFrom && Math.abs(w.spdKt - sb[i].spdKt) < 0.001);
-    }
-    // Bozza diversa dal bollettino (righe modificate o aggiunte)
-    function draftDiffersFromBulletin() {
-      return state.windDraft.length !== state.windBulletin.length || state.windDraft.some(windRowEdited);
-    }
-    // Ci sono venti modificati/rilevati che un aggiornamento automatico del bollettino non deve cancellare
-    function windsLocked() { return state.windValidated || draftDiffersFromBulletin(); }
-
-    let windFetchOffline = false;
-    let lastBulletinSel = { date: dateInput.value, hour: hourSelect.value };
-
-    function renderWindStatus() {
-      const pending = !sameWinds(state.windDraft, state.winds);
-      let src = state.windSource || "Profilo predefinito (locale)";
-      if (state.windValidated) src += " + rilevati in loco" + (state.windObsTime ? " (" + state.windObsTime + ")" : "");
-      if (windFetchOffline) src += " [Offline]";
-
-      const srcEl = document.getElementById("noaaSourceLbl");
-      const valEl = document.getElementById("noaaRunTime");
-      if (srcEl) srcEl.textContent = src;
-      if (valEl) valEl.textContent = state.windValidTime || "--";
-      const posEl = document.getElementById("windPosLbl");
-      if (posEl) posEl.textContent = AeronavCore.latLonToMgrs(state.dipLat, state.dipLon, 5);
-
-      const badge = document.getElementById("windStatusBadge");
-      if (badge) {
-        if (pending) {
-          badge.className = "wind-badge pending";
-          badge.textContent = "MODIFICHE NON VALIDATE";
-        } else if (state.windValidated) {
-          badge.className = "wind-badge ok";
-          badge.textContent = "RILEVATI VALIDATI · IN USO";
-        } else {
-          badge.className = "wind-badge base";
-          badge.textContent = "BOLLETTINO IN USO";
-        }
-      }
-      const sumSrc = document.getElementById("windSummarySrc");
-      const sumVal = document.getElementById("windSummaryVal");
-      const sumPend = document.getElementById("windSummaryPending");
-      if (sumSrc) {
-        sumSrc.textContent = src;
-        sumSrc.style.color = state.windValidated ? "var(--accent)" : "var(--cyan)";
-      }
-      if (sumVal) sumVal.textContent = state.windValidTime || "--";
-      if (sumPend) sumPend.style.display = pending ? "block" : "none";
-    }
-
     function renderWindTable() {
       const tbody = document.getElementById("windTableBody");
       tbody.innerHTML = "";
-      state.windDraft.sort((a, b) => a.altFt - b.altFt);
-      state.windDraft.forEach((w, idx) => {
-        const fc = bulletinAt(w.altFt);
+      state.winds.forEach((w, idx) => {
+        const dispAlt = isMetricAlt
+          ? Math.round(w.altFt * AeronavCore.FT_TO_M).toLocaleString("it-IT") + " m"
+          : w.altFt.toLocaleString("it-IT") + " ft";
+        const dispSpd = isMetricSpd
+          ? Number((w.spdKt * AeronavCore.KT_TO_MS).toFixed(1))
+          : Math.round(w.spdKt);
         const tr = document.createElement("tr");
-        if (!fc) tr.className = "wind-added";
-        else if (windRowEdited(w)) tr.className = "wind-edited";
-        const dispAlt = altDisp(w.altFt).toLocaleString("it-IT") + (isMetricAlt ? " m" : " ft");
-        const fcTxt = fc ? `${String(fc.dirFrom).padStart(3, "0")}° / ${spdDisp(fc.spdKt)}` : "—";
-        const actBtn = fc
-          ? `<button type="button" class="wind-row-btn wind-reset" data-act="reset" data-idx="${idx}" title="Ripristina il valore del bollettino">↺</button>`
-          : `<button type="button" class="wind-row-btn del" data-act="del" data-idx="${idx}" title="Elimina questa quota">✕</button>`;
         tr.innerHTML = `
           <td>${dispAlt}</td>
-          <td class="wind-fc">${fcTxt}</td>
           <td><input type="number" min="0" max="360" value="${w.dirFrom}" data-idx="${idx}" data-field="dirFrom" /></td>
-          <td><input type="number" min="0" step="${isMetricSpd ? "0.5" : "1"}" value="${spdDisp(w.spdKt)}" data-idx="${idx}" data-field="spd" /></td>
-          <td>${actBtn}</td>
+          <td><input type="number" min="0" max="150" step="${isMetricSpd ? "0.5" : "1"}" value="${dispSpd}" data-idx="${idx}" data-field="spd" /></td>
         `;
         tbody.appendChild(tr);
       });
@@ -830,147 +779,75 @@
         inp.addEventListener("change", (e) => {
           const i = parseInt(e.target.dataset.idx, 10);
           const f = e.target.dataset.field;
-          const row = state.windDraft[i];
-          const val = parseFloat(e.target.value);
-          if (!row) return;
-          if (!Number.isFinite(val) || val < 0) {
-            e.target.value = f === "dirFrom" ? row.dirFrom : spdDisp(row.spdKt); // valore non valido: ripristina
-            return;
-          }
+          const val = parseFloat(e.target.value) || 0;
           if (f === "dirFrom") {
-            row.dirFrom = ((Math.round(val) % 360) + 360) % 360;
-            e.target.value = row.dirFrom;
-          } else {
-            row.spdKt = isMetricSpd ? (val * AeronavCore.MS_TO_KT) : val;
+            state.winds[i].dirFrom = val;
+          } else if (f === "spd") {
+            state.winds[i].spdKt = isMetricSpd ? (val * AeronavCore.MS_TO_KT) : val;
           }
-          const tr = e.target.closest("tr");
-          if (bulletinAt(row.altFt)) tr.classList.toggle("wind-edited", windRowEdited(row));
-          renderWindStatus();
-          saveMissionState(); // salva la bozza, senza toccare i venti usati dal calcolo
+          state.windSource = (state.windSource || "NOAA GFS 0.25°").replace(" (modificato)", "") + " (modificato)";
+          const srcEl = document.getElementById("noaaSourceLbl");
+          if (srcEl) srcEl.textContent = state.windSource;
+          recalculateHarp();
         });
       });
-      tbody.querySelectorAll("button[data-act]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const i = parseInt(btn.dataset.idx, 10);
-          const row = state.windDraft[i];
-          if (!row) return;
-          if (btn.dataset.act === "del") {
-            state.windDraft.splice(i, 1);
-          } else {
-            const fc = bulletinAt(row.altFt);
-            if (fc) { row.dirFrom = fc.dirFrom; row.spdKt = fc.spdKt; }
-          }
-          renderWindTable();
-          saveMissionState();
-        });
-      });
-      renderWindStatus();
     }
 
-    function setWindMsg(txt) {
-      const el = document.getElementById("windMsg");
-      if (el) el.textContent = txt;
+    // Calcolo punto di rugiada (Td in °C) da Temperatura (°C) e Umidita' Relativa (%) via Magnus-Tetens
+    function calcDewPointC(tempC, rhPct) {
+      const rh = Math.max(1, Math.min(100, rhPct));
+      const a = 17.625;
+      const b = 243.04;
+      const gamma = Math.log(rh / 100) + (a * tempC) / (b + tempC);
+      return Number(((b * gamma) / (a - gamma)).toFixed(1));
     }
 
-    // Aggiunge una quota rilevata in loco alla bozza
-    document.getElementById("btnAddWind").addEventListener("click", () => {
-      const altRaw = parseFloat(document.getElementById("windAddAlt").value);
-      const dirRaw = parseFloat(document.getElementById("windAddDir").value);
-      const spdRaw = parseFloat(document.getElementById("windAddSpd").value);
-      if (!Number.isFinite(altRaw) || !Number.isFinite(dirRaw) || !Number.isFinite(spdRaw) || dirRaw < 0 || dirRaw > 360 || spdRaw < 0) {
-        setWindMsg("Compila quota, provenienza (0-360°) e velocità (≥ 0) della quota rilevata.");
-        return;
-      }
-      const altFt = Math.round(isMetricAlt ? altRaw * AeronavCore.M_TO_FT : altRaw);
-      if (altFt < -1500 || altFt > 60000) {
-        setWindMsg("Quota non valida.");
-        return;
-      }
-      if (state.windDraft.some(w => Math.abs(w.altFt - altFt) < 1)) {
-        setWindMsg("Esiste già una riga a questa quota: modificala direttamente in tabella.");
-        return;
-      }
-      state.windDraft.push({
-        altFt,
-        dirFrom: ((Math.round(dirRaw) % 360) + 360) % 360,
-        spdKt: isMetricSpd ? spdRaw * AeronavCore.MS_TO_KT : spdRaw
-      });
-      ["windAddAlt", "windAddDir", "windAddSpd"].forEach(id => { document.getElementById(id).value = ""; });
-      renderWindTable();
-      saveMissionState();
-      setWindMsg("Quota aggiunta in bozza: premi VALIDA VENTI per usarla nel calcolo.");
-    });
-
-    // VALIDA: la bozza diventa il profilo vento usato dal calcolo HARP
-    document.getElementById("btnValidateWinds").addEventListener("click", () => {
-      if (!state.windDraft.length) {
-        setWindMsg("Nessun vento in tabella: scarica il bollettino o aggiungi almeno una quota.");
-        return;
-      }
-      const pending = !sameWinds(state.windDraft, state.winds);
-      state.winds = cloneWinds(state.windDraft).sort((a, b) => a.altFt - b.altFt);
-      state.windValidated = draftDiffersFromBulletin();
-      state.windObsTime = state.windValidated ? (document.getElementById("windObsTime").value || "") : "";
-      renderWindTable();
-      recalculateHarp();
-      if (state.windValidated) {
-        setWindMsg("Venti rilevati in loco VALIDATI: il calcolo HARP li sta usando.");
-      } else {
-        setWindMsg(pending ? "Bollettino ripristinato e in uso nel calcolo." : "Nessuna modifica: il bollettino è già in uso.");
-      }
-    });
-
-    // RIPRISTINA: scarta le modifiche e torna al bollettino
-    document.getElementById("btnResetWinds").addEventListener("click", () => {
-      if (windsLocked() || !sameWinds(state.windDraft, state.winds)) {
-        if (!confirm("Scartare i venti modificati/rilevati in loco e tornare al bollettino?")) return;
-      }
-      state.windDraft = cloneWinds(state.windBulletin);
-      state.winds = cloneWinds(state.windBulletin);
-      state.windValidated = false;
-      state.windObsTime = "";
-      document.getElementById("windObsTime").value = "";
-      renderWindTable();
-      recalculateHarp();
-      setWindMsg("Bollettino ripristinato e in uso nel calcolo.");
-    });
-
-    async function fetchOpenMeteoWinds(force = false) {
+    async function fetchOpenMeteoWinds() {
       const dateStr = document.getElementById("windDate").value;
       const hourIdx = parseInt(document.getElementById("windHour").value, 10) || 0;
       const srcEl = document.getElementById("noaaSourceLbl");
       const runTimeEl = document.getElementById("noaaRunTime");
-      // Aggiornamenti automatici (es. spostamento del DIP) non cancellano venti modificati o rilevati in loco
-      const keepWinds = !force && windsLocked();
       const hpaLevels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250];
       const vars = [
         "pressure_msl",
+        "temperature_2m",
+        "relative_humidity_2m",
         "wind_speed_10m",
         "wind_direction_10m",
         ...hpaLevels.flatMap(p => [
           `wind_speed_${p}hPa`,
           `wind_direction_${p}hPa`,
-          `geopotential_height_${p}hPa`
+          `geopotential_height_${p}hPa`,
+          `temperature_${p}hPa`,
+          `relative_humidity_${p}hPa`
         ])
       ].join(",");
 
-      // Endpoint dedicato esclusivamente al modello NOAA GFS (0.25°)
       const url = `https://api.open-meteo.com/v1/gfs?latitude=${state.dipLat.toFixed(4)}&longitude=${state.dipLon.toFixed(4)}&hourly=${vars}&wind_speed_unit=kn&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
 
       try {
-        if (!keepWinds) {
-          if (srcEl) srcEl.textContent = "NOAA GFS 0.25° (NCEP)...";
-          if (runTimeEl) runTimeEl.textContent = "scaricamento...";
-        }
+        if (srcEl) srcEl.textContent = "NOAA GFS 0.25° (NCEP)...";
+        if (runTimeEl) runTimeEl.textContent = "scaricamento...";
         const res = await fetch(url);
         if (!res.ok) throw new Error("Errore API NOAA GFS");
         const data = await res.json();
         const surfaceElevM = typeof data.elevation === "number" ? data.elevation : (state.dipElevFt * AeronavCore.FT_TO_M);
         const newWinds = [];
+        const newSounding = [];
 
-        // Vento al suolo (10m AGL)
+        const pMsl = data.hourly.pressure_msl ? data.hourly.pressure_msl[hourIdx] : null;
+        if (typeof pMsl === "number" && !state.qnhManual) {
+          state.qnhHpa = Number(pMsl.toFixed(1));
+          document.getElementById("qnh").value = state.qnhHpa.toFixed(1);
+        }
+
+        // Livello al suolo DIP (2m / 10m AGL)
         const sfcSpd = data.hourly.wind_speed_10m?.[hourIdx];
         const sfcDir = data.hourly.wind_direction_10m?.[hourIdx];
+        const sfcT = data.hourly.temperature_2m?.[hourIdx];
+        const sfcRh = data.hourly.relative_humidity_2m?.[hourIdx];
+        const sfcP = stationPressureHpa(state.qnhHpa, surfaceElevM);
+
         if (sfcSpd != null && sfcDir != null) {
           newWinds.push({
             altFt: Math.round(surfaceElevM * AeronavCore.M_TO_FT),
@@ -978,12 +855,25 @@
             spdKt: Math.round(sfcSpd)
           });
         }
+        if (sfcT != null && sfcRh != null) {
+          newSounding.push({
+            pHpa: Number(sfcP.toFixed(1)),
+            altFt: Math.round(surfaceElevM * AeronavCore.M_TO_FT),
+            tempC: Number(sfcT.toFixed(1)),
+            dewC: calcDewPointC(sfcT, sfcRh),
+            dirFrom: sfcDir != null ? Math.round(sfcDir) : 0,
+            spdKt: sfcSpd != null ? Math.round(sfcSpd) : 0
+          });
+        }
 
-        // Livelli barici NOAA GFS con quota geopotenziale reale MSL
+        // Livelli barici NOAA GFS con quota geopotenziale reale MSL, T e Td
         for (const p of hpaLevels) {
           const geoM = data.hourly[`geopotential_height_${p}hPa`]?.[hourIdx];
           const spd = data.hourly[`wind_speed_${p}hPa`]?.[hourIdx];
           const dir = data.hourly[`wind_direction_${p}hPa`]?.[hourIdx];
+          const temp = data.hourly[`temperature_${p}hPa`]?.[hourIdx];
+          const rh = data.hourly[`relative_humidity_${p}hPa`]?.[hourIdx];
+
           if (geoM != null && geoM > surfaceElevM + 30 && spd != null && dir != null) {
             newWinds.push({
               altFt: Math.round(geoM * AeronavCore.M_TO_FT),
@@ -991,78 +881,54 @@
               spdKt: Math.round(spd)
             });
           }
+          if (geoM != null && temp != null && rh != null && p <= sfcP + 5) {
+            newSounding.push({
+              pHpa: p,
+              altFt: Math.round(geoM * AeronavCore.M_TO_FT),
+              tempC: Number(temp.toFixed(1)),
+              dewC: calcDewPointC(temp, rh),
+              dirFrom: dir != null ? Math.round(dir) : 0,
+              spdKt: spd != null ? Math.round(spd) : 0
+            });
+          }
         }
 
         newWinds.sort((a, b) => a.altFt - b.altFt);
+        newSounding.sort((a, b) => b.pHpa - a.pHpa);
 
-        // Pressione ridotta al livello del mare (NOAA GFS): precompila il QNH solo se non inserito a mano
-        const pMsl = data.hourly.pressure_msl ? data.hourly.pressure_msl[hourIdx] : null;
-        if (typeof pMsl === "number" && !state.qnhManual) {
-          state.qnhHpa = Number(pMsl.toFixed(1));
-          document.getElementById("qnh").value = state.qnhHpa.toFixed(1);
-        }
-
-        if (keepWinds) {
-          document.getElementById("dipStatus").textContent = "Venti modificati/rilevati in loco mantenuti: bollettino non sostituito (scheda Meteo > AGGIORNA NOAA per scaricarlo).";
-          renderWindStatus();
-          return;
+        if (newSounding.length >= 2) {
+          state.sounding = newSounding;
         }
 
         if (newWinds.length > 0) {
+          state.winds = newWinds;
           const tzAbbr = data.timezone_abbreviation || "Locale";
           const rawTime = data.hourly.time?.[hourIdx] || `${dateStr}T${String(hourIdx).padStart(2, "0")}:00`;
-          state.windBulletin = cloneWinds(newWinds);
-          state.windDraft = cloneWinds(newWinds);
-          state.winds = cloneWinds(newWinds);
-          state.windValidated = false;
-          state.windObsTime = "";
-          document.getElementById("windObsTime").value = "";
+          const validStr = `${rawTime.replace("T", " ")} (${tzAbbr})`;
           state.windSource = "NOAA GFS 0.25° (NCEP)";
-          state.windValidTime = `${rawTime.replace("T", " ")} (${tzAbbr})`;
-          windFetchOffline = false;
-          lastBulletinSel = { date: dateStr, hour: document.getElementById("windHour").value };
+          state.windValidTime = validStr;
+          if (srcEl) srcEl.textContent = state.windSource;
+          if (runTimeEl) runTimeEl.textContent = state.windValidTime;
           renderWindTable();
-          document.getElementById("dipStatus").textContent = "Dati DEM e venti NOAA GFS aggiornati.";
-        } else {
-          renderWindStatus();
-          document.getElementById("dipStatus").textContent = "Il bollettino NOAA GFS non ha dati di vento per la data/ora scelta: venti invariati.";
+          drawAllSkewT();
+          document.getElementById("dipStatus").textContent = "Dati DEM, venti e sondaggio Skew-T NOAA GFS aggiornati.";
         }
       } catch (err) {
-        windFetchOffline = !keepWinds;
-        renderWindStatus();
-        document.getElementById("dipStatus").textContent = "Uso profilo venti salvato (offline/errore rete NOAA).";
+        if (srcEl) srcEl.textContent = `${state.windSource || "Locale"} [Offline]`;
+        if (runTimeEl) runTimeEl.textContent = state.windValidTime || "--";
+        document.getElementById("dipStatus").textContent = "Uso profilo salvato (offline/errore rete NOAA).";
       }
     }
 
     async function refreshNoaaAndRecalc() {
-      if (windsLocked() && !confirm("Scaricare un nuovo bollettino sostituirà i venti modificati/rilevati in loco. Continuare?")) {
-        dateInput.value = lastBulletinSel.date;
-        hourSelect.value = lastBulletinSel.hour;
-        return;
-      }
-      document.getElementById("dipStatus").textContent = "Scaricamento venti NOAA GFS...";
-      await fetchOpenMeteoWinds(true);
+      document.getElementById("dipStatus").textContent = "Scaricamento sondaggio NOAA GFS...";
+      await fetchOpenMeteoWinds();
       recalculateHarp();
     }
 
     document.getElementById("btnFetchWind").addEventListener("click", refreshNoaaAndRecalc);
     document.getElementById("windDate").addEventListener("change", refreshNoaaAndRecalc);
     document.getElementById("windHour").addEventListener("change", refreshNoaaAndRecalc);
-
-    // Schede PLANNER / METEO
-    function showTab(name) {
-      const meteo = name === "meteo";
-      document.querySelector(".layout").style.display = meteo ? "none" : "";
-      document.getElementById("viewMeteo").style.display = meteo ? "block" : "none";
-      document.getElementById("tabPlanner").classList.toggle("active", !meteo);
-      document.getElementById("tabMeteo").classList.toggle("active", meteo);
-      if (!meteo) setTimeout(() => map.invalidateSize(), 50);
-      else window.scrollTo(0, 0);
-    }
-    document.getElementById("tabPlanner").addEventListener("click", () => showTab("planner"));
-    document.getElementById("tabMeteo").addEventListener("click", () => showTab("meteo"));
-    document.getElementById("btnOpenMeteo").addEventListener("click", () => showTab("meteo"));
-    document.getElementById("windObsTime").value = state.windObsTime || "";
 
     let windsSorted = [];
     function getWindAtAltitude(altFt) {
@@ -1089,7 +955,6 @@
       return sorted[0];
     }
 
-    // Pressione di stazione al suolo ricavata dal QNH con atmosfera standard ISA
     function stationPressureHpa(qnhHpa, elevM) {
       return qnhHpa * Math.pow(1 - (0.0065 * elevM) / 288.15, 5.255);
     }
@@ -1098,7 +963,7 @@
     let openElevReq = 0;
     let openGroundElevFt = null;
     const openElevCache = new Map();
-    let openElevStatus = "pending"; // "pending" | "dem" | "fallback"
+    let openElevStatus = "pending";
 
     function renderOpenPressure() {
       const elevFt = (openElevStatus === "dem" && openGroundElevFt !== null) ? openGroundElevFt : state.dipElevFt;
@@ -1142,6 +1007,412 @@
       }, 600);
     }
 
+    // =========================================================================
+    // MOTORE GRAFICO SKEW-T LOG-P DEL DIP
+    // =========================================================================
+    function updateSoundingMetrics() {
+      const snd = [...(state.sounding || [])].sort((a, b) => a.altFt - b.altFt);
+      const freezeEl = document.getElementById("skewFreezeLvl");
+      const launchEl = document.getElementById("skewLaunchTemp");
+      const sfcEl = document.getElementById("skewSfcTemp");
+      if (!snd.length) return;
+
+      // Temperatura e rugiada al suolo DIP
+      const sfc = snd[0];
+      sfcEl.textContent = `${sfc.tempC.toFixed(0)}° / ${sfc.dewC.toFixed(0)}°`;
+
+      // Zero termico (primo incrocio con 0 °C)
+      let freezeAltFt = null;
+      if (sfc.tempC <= 0) {
+        freezeAltFt = sfc.altFt;
+      } else {
+        for (let i = 0; i < snd.length - 1; i++) {
+          const a = snd[i], b = snd[i + 1];
+          if (a.tempC >= 0 && b.tempC <= 0 && a.tempC !== b.tempC) {
+            const frac = a.tempC / (a.tempC - b.tempC);
+            freezeAltFt = a.altFt + frac * (b.altFt - a.altFt);
+            break;
+          }
+        }
+      }
+      if (freezeAltFt !== null) {
+        freezeEl.textContent = isMetricAlt
+          ? `${Math.round(freezeAltFt * AeronavCore.FT_TO_M).toLocaleString("it-IT")} m`
+          : `${Math.round(freezeAltFt).toLocaleString("it-IT")} ft`;
+      } else {
+        freezeEl.textContent = "Sopra 250 hPa";
+      }
+
+      // Temperatura stimata alla quota di lancio
+      let launchT = snd[snd.length - 1].tempC;
+      for (let i = 0; i < snd.length - 1; i++) {
+        const a = snd[i], b = snd[i + 1];
+        if (state.launchAltFt >= a.altFt && state.launchAltFt <= b.altFt) {
+          const frac = (state.launchAltFt - a.altFt) / Math.max(1, b.altFt - a.altFt);
+          launchT = a.tempC + frac * (b.tempC - a.tempC);
+          break;
+        }
+      }
+      launchEl.textContent = `${launchT.toFixed(1)} °C`;
+    }
+
+    function drawWindBarb(ctx, x, y, dirFromDeg, spdKt) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.fillStyle = "#e2e8f0";
+      ctx.lineWidth = 1.3;
+
+      if (spdKt < 2.5) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
+
+      ctx.rotate((dirFromDeg * Math.PI) / 180);
+      const len = 20;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -len);
+      ctx.stroke();
+
+      let rem = Math.round(spdKt / 5) * 5;
+      let pos = -len;
+
+      while (rem >= 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, pos);
+        ctx.lineTo(7, pos + 2.5);
+        ctx.lineTo(0, pos + 5);
+        ctx.closePath();
+        ctx.fill();
+        pos += 6.5;
+        rem -= 50;
+      }
+      while (rem >= 10) {
+        ctx.beginPath();
+        ctx.moveTo(0, pos);
+        ctx.lineTo(7, pos - 2.5);
+        ctx.stroke();
+        pos += 3.5;
+        rem -= 10;
+      }
+      if (rem >= 5) {
+        if (pos === -len) pos += 3;
+        ctx.beginPath();
+        ctx.moveTo(0, pos);
+        ctx.lineTo(4, pos - 1.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function renderSkewT(canvas, readoutEl) {
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width;
+      const H = canvas.height;
+      const compact = W < 500;
+
+      const pad = compact
+        ? { top: 14, right: 44, bottom: 24, left: 46 }
+        : { top: 20, right: 64, bottom: 32, left: 66 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      const pMin = 250;
+      const pMax = 1020;
+      const logPMin = Math.log(pMin);
+      const logPMax = Math.log(pMax);
+
+      const tMin = -50;
+      const tMax = 40;
+      const skewFactor = 0.85;
+
+      const pToY = (p) => pad.top + ((Math.log(p) - logPMin) / (logPMax - logPMin)) * plotH;
+      const yToP = (y) => Math.exp(logPMin + ((y - pad.top) / plotH) * (logPMax - logPMin));
+      const tpToX = (tC, p) => {
+        const yNorm = (Math.log(pMax) - Math.log(p)) / (logPMax - logPMin);
+        const tBaseNorm = (tC - tMin) / (tMax - tMin);
+        return pad.left + (tBaseNorm + yNorm * skewFactor) * plotW;
+      };
+      const xyToT = (x, y) => {
+        const yNorm = (pad.top + plotH - y) / plotH;
+        const xNorm = (x - pad.left) / plotW;
+        return tMin + (xNorm - yNorm * skewFactor) * (tMax - tMin);
+      };
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#080d16";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(pad.left, pad.top, plotW, plotH);
+      ctx.clip();
+
+      // 1. Adiabatiche secche
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      for (let thetaC = -20; thetaC <= 120; thetaC += 15) {
+        const thetaK = thetaC + 273.15;
+        ctx.beginPath();
+        for (let p = pMax; p >= pMin; p -= 25) {
+          const tC = thetaK * Math.pow(p / 1000, 0.2857) - 273.15;
+          const x = tpToX(tC, p);
+          const y = pToY(p);
+          if (p === pMax) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // 2. Isoterme inclinate
+      for (let t = -90; t <= 50; t += 10) {
+        const isZero = t === 0;
+        ctx.strokeStyle = isZero ? "rgba(56, 189, 248, 0.72)" : "rgba(148, 163, 184, 0.16)";
+        ctx.lineWidth = isZero ? 1.6 : 1;
+        ctx.beginPath();
+        ctx.moveTo(tpToX(t, pMax), pToY(pMax));
+        ctx.lineTo(tpToX(t, pMin), pToY(pMin));
+        ctx.stroke();
+      }
+
+      // 3. Isobare orizzontali
+      const stdLevels = [1000, 925, 850, 700, 500, 400, 300, 250];
+      stdLevels.forEach(p => {
+        const y = pToY(p);
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + plotW, y);
+        ctx.stroke();
+      });
+
+      // 4. Linea del suolo DIP
+      const sfcP = stationPressureHpa(state.qnhHpa, state.dipElevFt * AeronavCore.FT_TO_M);
+      if (sfcP >= pMin && sfcP <= pMax) {
+        const ySfc = pToY(sfcP);
+        ctx.fillStyle = "rgba(148, 163, 184, 0.14)";
+        ctx.fillRect(pad.left, ySfc, plotW, pad.top + plotH - ySfc);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, ySfc);
+        ctx.lineTo(pad.left + plotW, ySfc);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 5. Linea Quota di Lancio (HARP)
+      const launchP = stationPressureHpa(state.qnhHpa, state.launchAltFt * AeronavCore.FT_TO_M);
+      if (launchP >= pMin && launchP <= pMax) {
+        const yL = pToY(launchP);
+        ctx.strokeStyle = "#a855f7";
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yL);
+        ctx.lineTo(pad.left + plotW, yL);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#c084fc";
+        ctx.font = compact ? "bold 9px monospace" : "bold 11px monospace";
+        const altStr = isMetricAlt
+          ? `${Math.round(state.launchAltFt * AeronavCore.FT_TO_M)}m`
+          : `${Math.round(state.launchAltFt)}ft`;
+        ctx.fillText(`LANCIO ${altStr}`, pad.left + 6, yL - 4);
+      }
+
+      // 6. Profili Temperatura (T) e Punto di Rugiada (Td)
+      const snd = [...(state.sounding || [])].sort((a, b) => b.pHpa - a.pHpa);
+      if (snd.length >= 2) {
+        ctx.fillStyle = "rgba(34, 197, 94, 0.08)";
+        ctx.beginPath();
+        snd.forEach((pt, idx) => {
+          const x = tpToX(pt.tempC, pt.pHpa);
+          const y = pToY(pt.pHpa);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        for (let i = snd.length - 1; i >= 0; i--) {
+          ctx.lineTo(tpToX(snd[i].dewC, snd[i].pHpa), pToY(snd[i].pHpa));
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Curva Punto di Rugiada (Td - Verde)
+        ctx.strokeStyle = "#22c55e";
+        ctx.lineWidth = compact ? 2 : 2.5;
+        ctx.beginPath();
+        snd.forEach((pt, idx) => {
+          const x = tpToX(pt.dewC, pt.pHpa);
+          const y = pToY(pt.pHpa);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Curva Temperatura (T - Rosso)
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = compact ? 2.2 : 2.8;
+        ctx.beginPath();
+        snd.forEach((pt, idx) => {
+          const x = tpToX(pt.tempC, pt.pHpa);
+          const y = pToY(pt.pHpa);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        snd.forEach(pt => {
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.arc(tpToX(pt.tempC, pt.pHpa), pToY(pt.pHpa), compact ? 2 : 2.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#22c55e";
+          ctx.beginPath();
+          ctx.arc(tpToX(pt.dewC, pt.pHpa), pToY(pt.pHpa), compact ? 2 : 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pad.left, pad.top, plotW, plotH);
+
+      // Etichette asse Y (Pressione hPa e Quota MSL)
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = compact ? "9px monospace" : "11px monospace";
+      ctx.textAlign = "right";
+      [1000, 925, 850, 700, 500, 400, 300, 250].forEach(p => {
+        const y = pToY(p);
+        const match = snd.find(s => Math.abs(s.pHpa - p) < 8);
+        const altFt = match ? match.altFt : Math.round(44330 * (1 - Math.pow(p / 1013.25, 1 / 5.255)) * AeronavCore.M_TO_FT);
+        const altLabel = isMetricAlt
+          ? `${(altFt * AeronavCore.FT_TO_M / 1000).toFixed(1)}k`
+          : `${Math.round(altFt / 1000)}k`;
+        ctx.fillStyle = "#e2e8f0";
+        ctx.fillText(`${p}`, pad.left - 5, y + 3);
+        if (!compact) {
+          ctx.fillStyle = "#64748b";
+          ctx.fillText(altLabel, pad.left - 32, y + 3);
+        }
+      });
+
+      // Etichette asse X (Temperatura alla base in °C)
+      ctx.textAlign = "center";
+      for (let t = -40; t <= 30; t += 10) {
+        const x = tpToX(t, pMax);
+        if (x >= pad.left && x <= pad.left + plotW) {
+          ctx.fillStyle = t === 0 ? "#38bdf8" : "#94a3b8";
+          ctx.fillText(`${t}°`, x, pad.top + plotH + (compact ? 14 : 18));
+        }
+      }
+
+      // Colonna Barbule del Vento (Wind Barbs) a destra
+      const barbX = pad.left + plotW + (compact ? 22 : 32);
+      ctx.strokeStyle = "rgba(51, 65, 85, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(barbX, pad.top);
+      ctx.lineTo(barbX, pad.top + plotH);
+      ctx.stroke();
+
+      snd.forEach((pt, idx) => {
+        if (compact && idx % 2 === 1 && idx !== snd.length - 1) return;
+        const y = pToY(pt.pHpa);
+        if (y >= pad.top && y <= pad.top + plotH) {
+          drawWindBarb(ctx, barbX, y, pt.dirFrom, pt.spdKt);
+        }
+      });
+
+      canvas._skewGeom = { pad, plotW, plotH, pMin, pMax, yToP, xyToT };
+    }
+
+    function attachSkewTInteraction(canvas, readoutEl) {
+      if (!canvas || !readoutEl) return;
+      const handleMove = (clientX, clientY) => {
+        const g = canvas._skewGeom;
+        if (!g) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const cx = (clientX - rect.left) * scaleX;
+        const cy = (clientY - rect.top) * scaleY;
+
+        if (cx < g.pad.left || cx > g.pad.left + g.plotW || cy < g.pad.top || cy > g.pad.top + g.plotH) {
+          return;
+        }
+        const p = g.yToP(cy);
+        const tCursor = g.xyToT(cx, cy);
+
+        const snd = state.sounding || [];
+        let nearest = snd[0];
+        let bestDiff = Infinity;
+        for (const s of snd) {
+          const d = Math.abs(s.pHpa - p);
+          if (d < bestDiff) { bestDiff = d; nearest = s; }
+        }
+
+        const altFt = nearest
+          ? nearest.altFt
+          : Math.round(44330 * (1 - Math.pow(p / state.qnhHpa, 1 / 5.255)) * AeronavCore.M_TO_FT);
+        const altStr = isMetricAlt
+          ? `${Math.round(altFt * AeronavCore.FT_TO_M)} m`
+          : `${Math.round(altFt)} ft`;
+
+        if (nearest) {
+          const spdStr = isMetricSpd
+            ? `${(nearest.spdKt * AeronavCore.KT_TO_MS).toFixed(1)} m/s`
+            : `${nearest.spdKt} kt`;
+          readoutEl.textContent =
+            `${Math.round(p)} hPa (~${altStr}) | T: ${nearest.tempC.toFixed(1)}°C | Td: ${nearest.dewC.toFixed(1)}°C | Vento: ${String(nearest.dirFrom).padStart(3, "0")}°/${spdStr}`;
+        } else {
+          readoutEl.textContent = `${Math.round(p)} hPa (~${altStr}) | Isoterma cursore: ${tCursor.toFixed(1)}°C`;
+        }
+      };
+
+      canvas.addEventListener("mousemove", (e) => handleMove(e.clientX, e.clientY));
+      canvas.addEventListener("touchmove", (e) => {
+        if (e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+    }
+
+    function drawAllSkewT() {
+      updateSoundingMetrics();
+      renderSkewT(document.getElementById("skewtCanvas"), document.getElementById("skewtReadout"));
+      const modal = document.getElementById("skewtModal");
+      if (modal && modal.classList.contains("open")) {
+        document.getElementById("modalDipMgrs").textContent = AeronavCore.latLonToMgrs(state.dipLat, state.dipLon, 5);
+        renderSkewT(document.getElementById("skewtCanvasModal"), document.getElementById("skewtReadoutModal"));
+      }
+    }
+
+    attachSkewTInteraction(document.getElementById("skewtCanvas"), document.getElementById("skewtReadout"));
+    attachSkewTInteraction(document.getElementById("skewtCanvasModal"), document.getElementById("skewtReadoutModal"));
+
+    document.getElementById("btnExpandSkewT").addEventListener("click", () => {
+      document.getElementById("skewtModal").classList.add("open");
+      drawAllSkewT();
+    });
+    document.getElementById("btnCloseSkewT").addEventListener("click", () => {
+      document.getElementById("skewtModal").classList.remove("open");
+    });
+    document.getElementById("skewtModal").addEventListener("click", (e) => {
+      if (e.target.id === "skewtModal") {
+        document.getElementById("skewtModal").classList.remove("open");
+      }
+    });
+
     function recalculateHarp(forceFit = false) {
       windsSorted = [...state.winds].sort((a, b) => a.altFt - b.altFt);
       if (windsSorted.length === 0) windsSorted = [{ altFt: 0, dirFrom: 0, spdKt: 0 }];
@@ -1162,7 +1433,6 @@
       state.freefallFpm = isMetricSpd ? (rawFall * AeronavCore.M_TO_FT * 60) : rawFall;
       state.qnhHpa = (Number.isFinite(rawQnh) && rawQnh >= 850 && rawQnh <= 1090) ? rawQnh : 1013.2;
 
-      // La quota di apertura non puo' superare la quota di lancio
       const warnEl = document.getElementById("altWarn");
       let openAltEffFt = state.openAltFt;
       if (state.openAltFt > state.launchAltFt) {
@@ -1187,13 +1457,12 @@
       const canopyHorizKt = (canopyHorizFps * AeronavCore.FT_TO_M) * AeronavCore.MS_TO_KT;
 
       const stepFt = 500;
-      const maxSteps = 400; // protezione contro valori enormi digitati nei campi
+      const maxSteps = 400;
       const canopyStepFt = Math.max(stepFt, (openAltEffFt - targetArrivalAltFt) / maxSteps);
       const freefallStepFt = Math.max(stepFt, (state.launchAltFt - openAltEffFt) / maxSteps);
       let canopyTimeSec = 0;
       let freefallTimeSec = 0;
 
-      // FASE 1 (a ritroso): dal DIP risalgo controvento fino alla quota di apertura, con vela aperta
       const canopyPts = [{ lat: state.dipLat, lon: state.dipLon, altFt: targetArrivalAltFt }];
       let currLat = state.dipLat;
       let currLon = state.dipLon;
@@ -1219,9 +1488,6 @@
       state.openLat = currLat;
       state.openLon = currLon;
 
-      // FASE 2 (a ritroso): dall'apertura risalgo fino alla quota di lancio. Paracadute chiuso:
-      // nessuna velocita' propria, il corpo e' trasportato solo dal vento -> il punto di lancio
-      // e' spostato controvento rispetto al punto di apertura.
       const freefallPts = [{ lat: currLat, lon: currLon, altFt: openAltEffFt }];
       for (let alt = openAltEffFt; alt < state.launchAltFt; alt += freefallStepFt) {
         const dh = Math.min(freefallStepFt, state.launchAltFt - alt);
@@ -1269,7 +1535,6 @@
       harpMarker.setLatLng([state.harpLat, state.harpLon]);
       openMarker.setLatLng([state.openLat, state.openLon]);
 
-      // Tracce: planata (apertura -> DIP) in verde, caduta libera (lancio -> apertura) tratteggiata arancio
       canopyPts.reverse();
       freefallPts.reverse();
       const canopyLatLngs = canopyPts.map(p => [p.lat, p.lon]);
@@ -1310,8 +1575,8 @@
 
       fitTrack(freefallLatLngs.concat(canopyLatLngs), forceFit);
 
+      drawAllSkewT();
       scheduleOpenGroundElev();
-      renderWindStatus();
       saveMissionState();
     }
 
@@ -1323,7 +1588,6 @@
     ["dipElev", "safetyFactor", "launchAlt", "openAlt", "glideRatio", "sinkRate", "freefallRate", "qnh"].forEach(id => {
       document.getElementById(id).addEventListener("input", debouncedRecalc);
     });
-    // Se il QNH viene digitato a mano, non viene piu' sovrascritto dall'aggiornamento venti
     document.getElementById("qnh").addEventListener("input", () => { state.qnhManual = true; });
 
     document.getElementById("btnCopyOpen").addEventListener("click", () => {
