@@ -2,6 +2,15 @@
 
 Applicazione web progressiva (**PWA**) installabile su smartphone e pronta per la pubblicazione diretta su **GitHub Pages** o qualsiasi hosting statico HTTPS.
 
+## Novità v12
+* **Scheda `METEO` nel Planner**: in alto, accanto a `PLANNER`, c'è la nuova scheda con il bollettino venti NOAA GFS (fonte, validità, posizione del DIP, data e ora di lancio, `AGGIORNA NOAA`). Il vecchio riquadro "Venti in quota" della colonna laterale è stato spostato qui; nella colonna resta un riepilogo (venti in uso, validità, avviso di modifiche non validate) con il pulsante `SCHEDA METEO →`.
+* **Bollettino modificabile con venti rilevati in loco**: per ogni quota la tabella mostra il valore del bollettino (sola lettura) e i campi `Prov.` e `Vel.` modificabili. Le righe modificate sono in arancio (con `↺` per ripristinare la singola riga). Con `+ AGGIUNGI` si inserisce una quota rilevata in loco (es. pilot balloon); le quote aggiunte sono in verde e si possono eliminare con `✕`. Unità di misura (ft/m, kt/m/s) secondo le impostazioni.
+* **Pulsante `VALIDA VENTI`**: le modifiche restano in bozza e **non influenzano il calcolo HARP** finché non vengono validate. Alla validazione il profilo diventa quello usato dal Planner (traccia, punto di apertura, HARP, GPX) e l'etichetta fonte diventa `NOAA GFS + rilevati in loco`. Si può indicare l'ora del rilevamento (facoltativa). Un indicatore mostra lo stato: `BOLLETTINO IN USO`, `MODIFICHE NON VALIDATE` oppure `RILEVATI VALIDATI · IN USO`.
+* **`RIPRISTINA BOLLETTINO`**: scarta modifiche e quote aggiunte e torna al bollettino (con conferma).
+* **Protezione dei venti rilevati**: se ci sono venti modificati o validati, lo spostamento del DIP **non** riscarica né sovrascrive il bollettino (il QNH continua ad aggiornarsi). Un nuovo bollettino si scarica solo con `AGGIORNA NOAA` o cambiando data/ora, e in quel caso viene chiesta conferma prima di sostituire i venti rilevati.
+* **Salvataggio**: bozza, bollettino e venti validati sono salvati sul dispositivo; i vecchi salvataggi vengono migrati (i venti salvati diventano il bollettino di riferimento).
+* Corretto: se il bollettino non contiene dati per l'ora scelta, l'etichetta non resta più bloccata su "scaricamento...".
+
 ## Novità v11
 * **DIP alternativi illimitati**: nella scheda `DIP / ALT` non ci sono più 5 slot fissi. Il pulsante `+ AGGIUNGI DIP ALTERNATIVO` crea un nuovo DIP (nome `ALT n`, partenza dal centro della mappa, quota letta dal DEM); poi si imposta con le coordinate MGRS, con `MAPPA` (tocco sulla mappa) o `DEM`. Il numero di DIP alternativi compare nel titolo della scheda (`DIP / ALT (n)`).
 * **Elimina DIP**: ogni DIP alternativo ha il pulsante `✕` (con conferma). Il DIP attualmente attivo non si può eliminare: si attiva prima un altro DIP.
