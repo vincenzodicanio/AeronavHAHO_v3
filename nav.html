@@ -393,10 +393,54 @@
       .alt-actions {
         grid-column: 1 / -1;
         display: grid !important;
-        grid-template-columns: 1fr 1fr 1.3fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 6px;
       }
     }
+    .alt-row.dip-hidden input { opacity: 0.6; }
+    .btn-vis {
+      background: rgba(34, 211, 238, 0.14);
+      color: var(--cyan);
+      border: 1px solid rgba(34, 211, 238, 0.55);
+      border-radius: 6px;
+      padding: 8px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .btn-vis.off {
+      background: #1e293b;
+      color: var(--muted);
+      border-color: var(--border);
+    }
+    .btn-vis:disabled { opacity: 0.7; cursor: default; }
+    .btn-del {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 6px;
+      padding: 8px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-del:disabled { opacity: 0.35; cursor: default; }
+    .btn-add-dip {
+      width: 100%;
+      margin-top: 8px;
+      background: rgba(34, 197, 94, 0.14);
+      color: var(--accent);
+      border: 1px dashed rgba(34, 197, 94, 0.6);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .alt-empty { color: var(--muted); font-size: 11px; padding: 8px 6px; }
     label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
     input {
       width: 100%;
@@ -694,14 +738,14 @@
   <header class="topbar" id="topbar">
     <div class="tabs">
       <button class="tab-btn active" data-tab="viewMap">MAPPA</button>
-      <button class="tab-btn" data-tab="viewTargets">DIP / ALT (5)</button>
+      <button class="tab-btn" data-tab="viewTargets" id="tabTargets">DIP / ALT (5)</button>
       <button class="tab-btn" data-tab="viewTeam" id="tabTeam">TEAM</button>
       <button class="tab-btn" data-tab="viewSettings">IMPOSTAZIONI</button>
       <a href="./index.html" class="tab-btn" style="text-decoration:none; color:var(--amber); border-color:rgba(245,158,11,0.45);">PLANNER</a>
     </div>
     <div class="top-tools">
       <button id="btnInstall" class="tool-btn on" style="display:none;">INSTALLA</button>
-      <button id="btnTapDip" class="tool-btn" title="Tocca un punto su mappa per impostare DIP alternato">TAP DIP</button>
+      <button id="btnTapDip" class="tool-btn" title="Tocca un punto su mappa per aggiungere un DIP alternativo">TAP DIP</button>
       <button id="btnCompass" class="tool-btn on" title="Orientamento Bussola">HDG UP</button>
       <button id="btnCenter" class="tool-btn on" title="Centra su GPS">GPS</button>
       <button id="btnOrient" class="tool-btn" title="Orientamento schermo: AUTO / ORIZZONTALE / VERTICALE">↻ AUTO</button>
@@ -795,7 +839,7 @@
       </div>
   </section>
 
-  <!-- SCHEDA 2: IMPOSTAZIONE HARP, DIP PRINCIPALE E 5 DIP ALTERNATIVI IN MGRS -->
+  <!-- SCHEDA 2: IMPOSTAZIONE HARP, DIP PRINCIPALE E DIP ALTERNATIVI (quanti si vuole) IN MGRS -->
   <section id="viewTargets" class="view">
     <div class="config-scroll">
       <div class="panel-box">
@@ -826,7 +870,8 @@
             <label>Quota (<span class="unit-alt-txt">ft</span>)</label>
             <input type="number" id="mainDipElev" value="100" />
           </div>
-          <div class="alt-actions" style="display:flex; gap:4px;">
+          <div class="alt-actions" style="display:flex; gap:4px; flex-wrap:wrap;">
+            <button class="btn-vis" id="visBtn_main" onclick="toggleDipVisible('main')">● VISIBILE</button>
             <button class="btn-map-set" onclick="pickSlotOnMap('main')" title="Posiziona con tap su mappa">MAPPA</button>
             <button class="btn-dem" onclick="fetchRowDem('main')">DEM</button>
             <button class="btn-act" onclick="activateTarget('main')">ATTIVA</button>
@@ -836,10 +881,11 @@
 
       <div class="panel-box">
         <div class="panel-title">
-          <span>5 DIP ALTERNATIVI DI EMERGENZA</span>
+          <span id="altDipsTitle">DIP ALTERNATIVI DI EMERGENZA (5)</span>
           <span>PREMI ATTIVA PER NAVIGARE</span>
         </div>
         <div id="altDipsContainer"></div>
+        <button type="button" class="btn-add-dip" id="btnAddDip" onclick="addAltDip()">+ AGGIUNGI DIP ALTERNATIVO</button>
       </div>
     </div>
   </section>
@@ -1381,21 +1427,34 @@
       });
     }
 
+    // Un DIP e' mostrato sulla mappa se non e' stato nascosto; il DIP attivo (bersaglio di navigazione) e' sempre visibile.
+    function getDipBySlot(slot) {
+      return String(slot) === "main" ? navState.mainDip : navState.altDips[parseInt(slot, 10)];
+    }
+    function isDipShown(slot) {
+      if (String(navState.activeId) === String(slot)) return true;
+      const d = getDipBySlot(slot);
+      return !!d && d.visible !== false;
+    }
+
     function renderAllDipMarkers() {
       dipMarkersLayer.clearLayers();
 
       const isMainActive = navState.activeId === "main";
-      const mainM = L.marker([navState.mainDip.lat, navState.mainDip.lon], {
-        icon: createDipMarkerIcon(navState.mainDip.name, isMainActive),
-        zIndexOffset: isMainActive ? 900 : 500
-      }).addTo(dipMarkersLayer);
+      if (isDipShown("main")) {
+        const mainM = L.marker([navState.mainDip.lat, navState.mainDip.lon], {
+          icon: createDipMarkerIcon(navState.mainDip.name, isMainActive),
+          zIndexOffset: isMainActive ? 900 : 500
+        }).addTo(dipMarkersLayer);
 
-      mainM.on("click", (e) => {
-        L.DomEvent.stopPropagation(e);
-        returnToDipTabWithSelection("main");
-      });
+        mainM.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          returnToDipTabWithSelection("main");
+        });
+      }
 
       navState.altDips.forEach((alt, idx) => {
+        if (!isDipShown(idx)) return;
         const isAltActive = navState.activeId === String(idx);
         const m = L.marker([alt.lat, alt.lon], {
           icon: createDipMarkerIcon(alt.name, isAltActive),
@@ -1433,7 +1492,7 @@
         btn.classList.add("pick-on");
         banner.classList.add("visible");
         banner.textContent = tapAssignSlot === "quick"
-          ? "TOCCA UN DIP ESISTENTE O UN PUNTO SULLA MAPPA PER SELEZIONARLO"
+          ? "TOCCA UN DIP ESISTENTE PER SELEZIONARLO, O UN PUNTO LIBERO PER AGGIUNGERE UN NUOVO DIP ALTERNATIVO"
           : `TOCCA SULLA MAPPA PER POSIZIONARE ${tapAssignSlot === "main" ? navState.mainDip.name : navState.altDips[tapAssignSlot].name}`;
       } else {
         btn.classList.remove("pick-on");
@@ -1462,14 +1521,17 @@
 
       const lat = e.latlng.lat;
       const lon = e.latlng.lng;
-      const targetSlot = tapAssignSlot === "quick" ? "4" : tapAssignSlot;
+      let targetSlot = tapAssignSlot;
+      if (tapAssignSlot === "quick") {
+        // TAP DIP su un punto libero: crea un nuovo DIP alternativo
+        navState.altDips.push({ name: `ALT ${navState.altDips.length + 1} MAPPA`, lat, lon, elevFt: 0, visible: true });
+        targetSlot = String(navState.altDips.length - 1);
+      }
 
-      const targetObj = targetSlot === "main" ? navState.mainDip : navState.altDips[parseInt(targetSlot, 10)];
+      const targetObj = getDipBySlot(targetSlot);
       targetObj.lat = lat;
       targetObj.lon = lon;
-      if (tapAssignSlot === "quick") {
-        targetObj.name = "ALT 5 MAPPA";
-      }
+      targetObj.visible = true; // un DIP appena posizionato resta visibile
 
       localStorage.setItem(NAV_KEY, JSON.stringify(navState));
       renderAllDipMarkers();
@@ -2007,6 +2069,9 @@
       document.getElementById("mainDipMgrs").value = AeronavCore.latLonToMgrs(navState.mainDip.lat, navState.mainDip.lon, 5);
       document.getElementById("mainDipElev").value = toDisplayAlt(navState.mainDip.elevFt);
 
+      document.getElementById("tabTargets").textContent = `DIP / ALT (${navState.altDips.length})`;
+      document.getElementById("altDipsTitle").textContent = `DIP ALTERNATIVI DI EMERGENZA (${navState.altDips.length})`;
+
       const mainRow = document.getElementById("row_main");
       mainRow.classList.remove("selected-row", "active-nav-row");
       if (pendingSelectedSlot === "main") mainRow.classList.add("selected-row");
@@ -2014,6 +2079,9 @@
 
       const cont = document.getElementById("altDipsContainer");
       cont.innerHTML = "";
+      if (!navState.altDips.length) {
+        cont.innerHTML = `<div class="alt-empty">Nessun DIP alternativo. Usa "+ AGGIUNGI DIP ALTERNATIVO" oppure TAP DIP sulla mappa.</div>`;
+      }
       navState.altDips.forEach((alt, idx) => {
         const slotStr = String(idx);
         const row = document.createElement("div");
@@ -2035,15 +2103,103 @@
             <label>Quota (${uTxt})</label>
             <input type="number" id="altElev_${idx}" value="${toDisplayAlt(alt.elevFt)}" />
           </div>
-          <div class="alt-actions" style="display:flex; gap:4px;">
+          <div class="alt-actions" style="display:flex; gap:4px; flex-wrap:wrap;">
+            <button class="btn-vis" id="visBtn_${idx}" onclick="toggleDipVisible(${idx})">● VISIBILE</button>
             <button class="btn-map-set" onclick="pickSlotOnMap(${idx})" title="Posiziona con tap su mappa">MAPPA</button>
             <button class="btn-dem" onclick="fetchRowDem(${idx})">DEM</button>
             <button class="btn-act" onclick="activateTarget(${idx})">ATTIVA</button>
+            <button class="btn-del" id="delBtn_${idx}" onclick="removeAltDip(${idx})" title="Elimina questo DIP">✕</button>
           </div>
         `;
         cont.appendChild(row);
+        const delBtn = row.querySelector(`#delBtn_${idx}`);
+        if (navState.activeId === slotStr) {
+          delBtn.disabled = true;
+          delBtn.title = "Il DIP attivo non si puo' eliminare: attiva prima un altro DIP";
+        }
       });
+
+      applyVisBtn("main");
+      navState.altDips.forEach((_, idx) => applyVisBtn(idx));
     }
+
+    // Aggiorna etichetta/stato del pulsante di visibilita' di un DIP
+    function applyVisBtn(slot) {
+      const el = document.getElementById(`visBtn_${slot}`);
+      if (!el) return;
+      const isActive = String(navState.activeId) === String(slot);
+      const shown = isDipShown(slot);
+      el.classList.toggle("off", !shown);
+      el.textContent = shown ? "● VISIBILE" : "○ NASCOSTO";
+      el.disabled = isActive;
+      el.title = isActive
+        ? "Il DIP attivo e' sempre visibile sulla mappa"
+        : "Mostra / nascondi questo DIP sulla mappa del navigatore";
+      const row = document.getElementById(`row_${slot}`);
+      if (row) row.classList.toggle("dip-hidden", !shown);
+    }
+
+    window.toggleDipVisible = function(slot) {
+      syncConfigFromInputs();
+      const d = getDipBySlot(slot);
+      if (!d) return;
+      d.visible = d.visible === false; // inverte: nascosto -> visibile, visibile -> nascosto
+      localStorage.setItem(NAV_KEY, JSON.stringify(navState));
+      renderAllDipMarkers();
+      applyVisBtn(slot);
+      document.getElementById("cfgMsg").textContent = `${d.name}: ${d.visible === false ? "NASCOSTO DALLA MAPPA" : "VISIBILE SULLA MAPPA"}`;
+    };
+
+    window.addAltDip = async function() {
+      syncConfigFromInputs();
+      const c = map.getCenter();
+      const idx = navState.altDips.length;
+      const dip = { name: `ALT ${idx + 1}`, lat: c.lat, lon: c.lng, elevFt: navState.mainDip.elevFt, visible: true };
+      navState.altDips.push(dip);
+      localStorage.setItem(NAV_KEY, JSON.stringify(navState));
+      pendingSelectedSlot = String(idx);
+      renderTargetConfig();
+      renderAllDipMarkers();
+      const rowEl = document.getElementById(`row_${idx}`);
+      if (rowEl) rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("cfgMsg").textContent = `${dip.name} AGGIUNTO: INSERISCI MGRS O USA MAPPA`;
+      try {
+        const elev = await AeronavCore.fetchElevationFt(dip.lat, dip.lon);
+        if (navState.altDips[idx] === dip) {
+          dip.elevFt = elev;
+          localStorage.setItem(NAV_KEY, JSON.stringify(navState));
+          const el = document.getElementById(`altElev_${idx}`);
+          if (el) el.value = toDisplayAlt(elev);
+        }
+      } catch (err) {}
+    };
+
+    window.removeAltDip = function(idx) {
+      syncConfigFromInputs();
+      const d = navState.altDips[idx];
+      if (!d) return;
+      if (navState.activeId === String(idx)) {
+        document.getElementById("cfgMsg").textContent = "IL DIP ATTIVO NON SI PUO' ELIMINARE: ATTIVA PRIMA UN ALTRO DIP";
+        return;
+      }
+      if (!confirm(`Eliminare ${d.name}?`)) return;
+      navState.altDips.splice(idx, 1);
+      // gli indici successivi scorrono di una posizione
+      if (navState.activeId !== "main") {
+        const a = parseInt(navState.activeId, 10);
+        if (a > idx) navState.activeId = String(a - 1);
+      }
+      if (pendingSelectedSlot !== null && pendingSelectedSlot !== "main") {
+        const p = parseInt(pendingSelectedSlot, 10);
+        if (p === idx) pendingSelectedSlot = null;
+        else if (p > idx) pendingSelectedSlot = String(p - 1);
+      }
+      setTapDipMode(null);
+      localStorage.setItem(NAV_KEY, JSON.stringify(navState));
+      renderTargetConfig();
+      renderAllDipMarkers();
+      document.getElementById("cfgMsg").textContent = `${d.name} ELIMINATO`;
+    };
 
     function syncConfigFromInputs() {
       try {

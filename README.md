@@ -2,6 +2,13 @@
 
 Applicazione web progressiva (**PWA**) installabile su smartphone e pronta per la pubblicazione diretta su **GitHub Pages** o qualsiasi hosting statico HTTPS.
 
+## Novità v11
+* **DIP alternativi illimitati**: nella scheda `DIP / ALT` non ci sono più 5 slot fissi. Il pulsante `+ AGGIUNGI DIP ALTERNATIVO` crea un nuovo DIP (nome `ALT n`, partenza dal centro della mappa, quota letta dal DEM); poi si imposta con le coordinate MGRS, con `MAPPA` (tocco sulla mappa) o `DEM`. Il numero di DIP alternativi compare nel titolo della scheda (`DIP / ALT (n)`).
+* **Elimina DIP**: ogni DIP alternativo ha il pulsante `✕` (con conferma). Il DIP attualmente attivo non si può eliminare: si attiva prima un altro DIP.
+* **`TAP DIP` sulla mappa**: toccando un punto libero viene aggiunto un nuovo DIP alternativo (prima sovrascriveva sempre `ALT 5`); toccando un DIP esistente lo si seleziona come prima.
+* **Visibilità sulla mappa**: ogni DIP (principale e alternativi) ha il pulsante `● VISIBILE / ○ NASCOSTO` che lo mostra o lo nasconde sulla mappa del navigatore. Il DIP **attivo** (bersaglio di navigazione) resta sempre visibile e il suo pulsante è bloccato; un DIP nascosto può essere comunque attivato, e rimane visibile finché è attivo. La scelta è salvata e mantenuta alla riapertura. Posizionare un DIP con `MAPPA` o `TAP DIP` lo rende di nuovo visibile.
+* **Compatibilità**: i dati già salvati (principale + 5 alternativi) vengono letti senza perdite e risultano tutti visibili.
+
 ## Novità v10
 * **Pulsante `↻ AUTO / ORIZ / VERT`** nella barra della scheda navigazione: alterna rotazione automatica, blocco in orizzontale e blocco in verticale (scelta salvata). Il blocco funziona nella PWA installata (Android); in una scheda del browser usa lo schermo intero. Dove il blocco non è supportato (es. iPhone) resta la rotazione automatica del dispositivo.
 * **Layout orizzontale**: con lo schermo in orizzontale i campi dati (efficienza, distanza DIP, velocità, direzione, MGRS) passano in una colonna a destra e la mappa, con il mirino e l'auto zoom, usa solo la parte sinistra.
